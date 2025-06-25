@@ -1,25 +1,34 @@
+// tsconfig.node.json
 {
   "compilerOptions": {
+    /* incremental info */
+    "incremental": true,  
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "target": "ES2023",
-    "lib": ["ES2023"],
-    "module": "ESNext",
-    "skipLibCheck": true,
 
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
+    /* ES2023 runtime and libs appropriate for a build-tool script */
+    // "target": "ES2023",
+    // "lib": ["ES2023"],
+
+    /* ---- node-style resolution & module system ---- */
+    "moduleResolution": "NodeNext",     // 👈 change from "bundler"
+    "module": "NodeNext",           // or "CommonJS" if you prefer require()
+
+    /* additional niceties you already had */
+    //"allowImportingTsExtensions": true,
+    //"verbatimModuleSyntax": true,
     "moduleDetection": "force",
-    "noEmit": true,
 
-    /* Linting */
+    /* analysis flags */
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
+    //"erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    //"noUncheckedSideEffectImports": true,
+
+    /* tooling */
+    "skipLibCheck": true
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts"],
+  "exclude": ["node_modules"]
 }
