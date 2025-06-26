@@ -1,4 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
+import { garageApi } from '../api/garageApi';
+import uiReducer from './uiSlice';
 
 /* ------------------------------------------------------------------
    Add slices here as you create them, e.g.
@@ -7,11 +9,12 @@ import { configureStore } from '@reduxjs/toolkit';
 -------------------------------------------------------------------*/
 
 export const store = configureStore({
-  reducer: {
-    // cars: carsReducer,
-    // winners: winnersReducer,
-  },
-  // middleware: (getDefault) => getDefault().concat(customApi.middleware),
+    reducer: {
+        ui: uiReducer,
+        [garageApi.reducerPath]: garageApi.reducer,
+      },
+      middleware: (getDefault) =>
+        getDefault().concat(garageApi.middleware),  
 });
 
 export type RootState = ReturnType<typeof store.getState>;
