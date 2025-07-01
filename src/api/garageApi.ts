@@ -44,15 +44,33 @@ export const garageApi = createApi({
         method: 'PATCH',
         body: patch,
       }),
-      invalidatesTags: (r, e, { id }) => [{ type: 'Cars', id }],
+      invalidatesTags: (result, error, { id }) => [{ type: 'Cars', id }],
     }),
 
     deleteCar: builder.mutation<{ id: number }, number>({
       query: (id) => ({ url: `/garage/${id}`, method: 'DELETE' }),
-      invalidatesTags: (r, e, id) => [
+      invalidatesTags: (result, error, id) => [
         { type: 'Cars', id },
         { type: 'Cars', id: 'PARTIAL-LIST' },
       ],
+    }),
+
+    // Engine controls for individual race lanes
+    startEngine: builder.mutation<
+      { velocity: number; distance: number; id: number },
+      number
+    >({
+      query: (id) => ({
+        url: `/engine?id=${id}&status=started`,
+        method: 'PATCH',
+      }),
+    }),
+
+    stopEngine: builder.mutation<void, number>({
+      query: (id) => ({
+        url: `/engine?id=${id}&status=stopped`,
+        method: 'PATCH',
+      }),
     }),
   }),
 });
@@ -62,5 +80,6 @@ export const {
   useCreateCarMutation,
   useUpdateCarMutation,
   useDeleteCarMutation,
+  useStartEngineMutation,
+  useStopEngineMutation,
 } = garageApi;
-

@@ -17,8 +17,12 @@ export const uiSlice = createSlice({
     selectCar: (state, { payload }: PayloadAction<number | null>) => {
       state.selectedCarId = payload;
     },
+    clearSelectedCar: (state) => {
+      state.selectedCarId = null;
+    },
   },
 });
 
-export const { setPage, selectCar } = uiSlice.actions;
+export const { setPage, selectCar, clearSelectedCar } = uiSlice.actions;
 export default uiSlice.reducer;
+

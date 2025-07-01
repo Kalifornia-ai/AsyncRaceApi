@@ -6,26 +6,29 @@ export const engineApi = createApi({
   reducerPath: 'engineApi',
   baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3000' }),
   endpoints: (builder) => ({
-    /* ───────── start / stop ───────── */
-    startEngine: builder.mutation<EngineResponse, number>({
-      query: (id) => `/engine?id=${id}&status=started`,   // GET
+    /* ─── start / stop ─── */
+    startEngine: builder.mutation<EngineResponse, { id: number; status: 'started' }>({
+      query: ({ id, status }) => ({
+        url: '/engine',
+        method: 'PATCH',
+        params: { id, status },
+      }),
     }),
-    stopEngine: builder.mutation<void, number>({
-      query: (id) => `/engine?id=${id}&status=stopped`,   // GET
+    stopEngine: builder.mutation<EngineResponse, { id: number; status: 'stopped' }>({
+      query: ({ id, status }) => ({
+        url: '/engine',
+        method: 'PATCH',
+        params: { id, status },
+      }),
     }),
 
-    /* ───────── drive  (→ /drive) ───────── */
-    drive: builder.mutation<{ success: boolean }, number>({
-      // your server.js doesn’t care about the HTTP verb,
-      // but PATCH matches the RS-School template
-      query: (id) => ({
-        url: `/drive?id=${id}`,
-        method: 'PATCH',          // or 'GET' if you prefer
+    /* ─── drive ─── */
+    driveEngine: builder.mutation<{ success: boolean }, { id: number; status: 'drive' }>({
+      query: ({ id, status }) => ({
+        url: '/engine',
+        method: 'PATCH',
+        params: { id, status },
       }),
-      transformResponse: (_: unknown, meta) => ({
-        success: meta?.response?.status === 200,
-      }),
-      transformErrorResponse: () => ({ success: false }),
     }),
   }),
 });
@@ -33,7 +36,7 @@ export const engineApi = createApi({
 export const {
   useStartEngineMutation,
   useStopEngineMutation,
-  useDriveMutation,
+  useDriveEngineMutation,
 } = engineApi;
 
 

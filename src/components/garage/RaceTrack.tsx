@@ -8,7 +8,7 @@ import {
   import {
     useStartEngineMutation,
     useStopEngineMutation,
-    useDriveMutation,
+    useDriveEngineMutation,
   } from '../../api/engineApi';
   import {
     useCreateWinnerMutation,
@@ -38,7 +38,7 @@ import {
     /* ------- RTK Query hooks ---------------------------------------- */
     const [startEngine]  = useStartEngineMutation();
     const [stopEngine]   = useStopEngineMutation();
-    const [drive]        = useDriveMutation();
+    const [drive]        = useDriveEngineMutation();
     const [createWinner] = useCreateWinnerMutation();
     const [updateWinner] = useUpdateWinnerMutation();
   
@@ -52,7 +52,7 @@ import {
         Object.values(lanes.current).forEach((lane) => {
           lane?.getAnimations().forEach((a) => a.pause());
         });
-        cars.forEach((c) => void stopEngine(c.id));
+        cars.forEach((c) =>  void stopEngine({ id: c.id, status: 'stopped' }).unwrap());
       },
       resetAll() {
         Object.values(lanes.current).forEach((lane) => {
@@ -77,7 +77,10 @@ import {
             let velocity = 0;
             let distance = 0;
             try {
-              ({ velocity, distance } = await startEngine(car.id).unwrap());
+              ({ velocity, distance } = await startEngine({
+                   id: car.id,
+                   status: 'started',
+                 }).unwrap());
               velocity = Math.max(velocity / DEV_SLOWDOWN, 80); // px/s safeguard
             } catch {
               return { id: car.id, time: Infinity };
@@ -85,17 +88,17 @@ import {
             if (signal.aborted) return { id: car.id, time: Infinity };
   
             /* 2. measure lane + travel */
-            const lane = lanes.current[car.id];
-            if (!lane) return { id: car.id, time: Infinity };
-            const rowW   = lane.parentElement?.getBoundingClientRect().width ?? 0;
-            const carW   = lane.getBoundingClientRect().width || 50;
-            const free   = Math.max(rowW - carW - 8, 0);
-            const travel = Math.max(free, distance, 20); // never less than 20px
-  
-            /* 3. duration */
+            const lane = lanes.current[car.id]!;
+            const rowW = lane.parentElement!.getBoundingClientRect().width;
+            const carW = lane.getBoundingClientRect().width;
+            
+            // clamp travel so you never animate off‐screen
+            const free = Math.max(rowW - carW - 8, 0);
+            const travel = Math.max(20, Math.min(distance, free));
+            
+            // duration in ms
             const durMs = (travel / velocity) * 1000;
-  
-            /* 4. animate */
+            
             lane.animate(
               [
                 { transform: 'translateX(0)' },
@@ -107,7 +110,10 @@ import {
             /* 5. drive endpoint – resolve after durMs so motion stays visible */
             let success = false;
             try {
-              ({ success } = await drive(car.id).unwrap());
+              ({ success } = await drive({
+                   id: car.id,
+                   status: 'drive',
+                 }).unwrap());
             } catch {
               success = false;
             }
@@ -145,7 +151,7 @@ import {
   
       return () => {
         controller.abort();
-        if (!finished.current) cars.forEach((c) => void stopEngine(c.id));
+        if (!finished.current) cars.forEach((c) => void stopEngine({ id: c.id, status: 'stopped' }).unwrap());
       };
     }, [cars, startEngine, drive, stopEngine, createWinner, updateWinner, onRaceEnd]);
   

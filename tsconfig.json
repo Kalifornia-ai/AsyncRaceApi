@@ -8,6 +8,7 @@
     "module": "ESNext",          // or commonjs / es2020 – anything TS recognises
     "moduleResolution": "node",  // 👈 default in most setups, but set it explicitly
     "baseUrl": ".",              // good practice when you add "paths"
+    "jsx":                      "react-jsx"
     /* … other options … */
   }
 }

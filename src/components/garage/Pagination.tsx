@@ -8,7 +8,7 @@ export default function Pagination({ total, limit }: { total: number; limit: num
 
   return (
     <div className="join">
-      <button
+      <button type="button"
         className="join-item btn btn-sm"
         disabled={page === 1}
         onClick={() => dispatch(setPage(page - 1))}
@@ -18,7 +18,7 @@ export default function Pagination({ total, limit }: { total: number; limit: num
       <span className="join-item px-3 text-sm">
         {page} / {pages || 1}
       </span>
-      <button
+      <button type="button"
         className="join-item btn btn-sm"
         disabled={page >= pages}
         onClick={() => dispatch(setPage(page + 1))}
