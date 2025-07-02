@@ -1,23 +1,33 @@
-import { useRef, useState } from 'react';
-import { useAppSelector } from '../app/hooks';
+/* src/pages/GaragePage.tsx */
+import { useEffect, useRef } from 'react';
+import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { useGetCarsQuery } from '../api/garageApi';
 import CarForm from '../components/garage/CarForm';
 import CarCard from '../components/garage/CarCard';
 import Pagination from '../components/garage/Pagination';
 import RaceTrack, { RaceTrackHandles } from '../components/garage/RaceTrack';
+import {
+  startRace,
+  resetRace,
+  finishRace,
+} from '../app/uiSlice';          // ← actions from the patched slice
 
 const PAGE_LIMIT = 7;
 
 export default function GaragePage() {
-  const page = useAppSelector((s) => s.ui.page);
-
-  const [isRacing, setRacing] = useState(false);
-  const [banner,  setBanner]  = useState<string | null>(null);   // ← keeps winner text
+  const dispatch  = useAppDispatch();
+  const page      = useAppSelector((s) => s.ui.garagePage);
+  const { isRacing, banner } = useAppSelector((s) => s.ui);
 
   const { data, isFetching, error } = useGetCarsQuery({ page, limit: PAGE_LIMIT });
   const trackRef = useRef<RaceTrackHandles>(null);
 
-  /* ---------- early error state ---------- */
+  /* ── cleanup in case user leaves mid-race ─────────────────────────── */
+  useEffect(() => () => {
+    trackRef.current?.stopAll();
+  }, []);
+
+  /* ── early error state ────────────────────────────────────────────── */
   if (error) {
     const msg =
       'status' in error
@@ -28,8 +38,7 @@ export default function GaragePage() {
 
   return (
     <section className="space-y-6">
-
-      {/* ⚠️ 1. banner restored */}
+      {/* Winner banner (persists through navigation) */}
       {banner && (
         <div className="rounded bg-green-100 text-green-800 px-3 py-2">
           {banner}
@@ -50,15 +59,12 @@ export default function GaragePage() {
         ))}
       </div>
 
-      {/* ---- Race controls ---- */}
+      {/* ── Race controls ─────────────────────────────────────────────── */}
       <div className="flex gap-4">
         <button
           className="btn btn-success"
           disabled={isRacing || (data?.data?.length ?? 0) === 0}
-          onClick={() => {
-            setBanner(null);            // ⚠️ 2. clear banner on new race
-            setRacing(true);
-          }}
+          onClick={() => dispatch(startRace())}
         >
           Race
         </button>
@@ -67,10 +73,9 @@ export default function GaragePage() {
           className="btn btn-outline"
           disabled={!isRacing}
           onClick={() => {
-            trackRef.current?.stopAll();   // pause + stopEngine
-            trackRef.current?.resetAll();  // rewind cars
-            setBanner(null);               // clear message
-            setRacing(false);
+            trackRef.current?.stopAll();
+            trackRef.current?.resetAll();
+            dispatch(resetRace());
           }}
         >
           Reset
@@ -81,16 +86,20 @@ export default function GaragePage() {
         <RaceTrack
           ref={trackRef}
           cars={data.data}
-          onRaceEnd={(msg) => {
-            setBanner(msg);                // show winner text
-            setRacing(false);
-          }}
+          onRaceEnd={(msg) => dispatch(finishRace(msg))}
         />
       )}
 
-      {data && <Pagination total={data.total} limit={PAGE_LIMIT} />}
+      {data && (
+        <Pagination
+          total={data.total}
+          limit={PAGE_LIMIT}
+          source="garage"            /* ← keeps this tab’s page counter */
+        />
+      )}
     </section>
   );
 }
+
 
   

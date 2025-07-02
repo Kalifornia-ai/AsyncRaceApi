@@ -1,29 +1,28 @@
-import { useState } from 'react';
-import {
-  useGetWinnersQuery,
-  Winner,
-} from '../api/winnersApi';
-import { useAppSelector } from '../app/hooks';
-import Pagination from '../components/garage/Pagination';
+/* src/pages/WinnersPage.tsx */
+import { useAppDispatch, useAppSelector } from '../app/hooks';
+import { useGetWinnersQuery } from '../api/winnersApi';
 import { useGetCarsQuery } from '../api/garageApi';
+import Pagination from '../components/garage/Pagination';
+import { setWinnersPage, setSort } from '../app/uiSlice';   // ← actions we created
 
 const LIMIT = 10;
 
 export default function WinnersPage() {
-  const [page, setPage]   = useState(1);
-  const [sort, setSort]   = useState<'wins' | 'time'>('wins');
-  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+  /* ─── UI state from Redux ─────────────────────────────────────────── */
+  const dispatch = useAppDispatch();
+  const { winnersPage: page, sort, order } = useAppSelector((s) => s.ui);
 
+  /* ─── Data fetches ────────────────────────────────────────────────── */
   const winnersQ = useGetWinnersQuery({ page, limit: LIMIT, sort, order });
-  // Need car names / colours for display
+  /* grab all cars once so we can map winner.id → {name,color} */
   const carsQ    = useGetCarsQuery({ page: 1, limit: 1000 });
+  const carById  = Object.fromEntries((carsQ.data?.data ?? []).map((c) => [c.id, c]));
 
-  const carById = Object.fromEntries((carsQ.data?.data ?? []).map((c) => [c.id, c]));
-
+  /* ─── Render ──────────────────────────────────────────────────────── */
   return (
     <section className="space-y-6">
       <h1 className="text-2xl font-semibold text-gray-900">
-        Winners ({winnersQ.data?.total ?? 0})
+        Winners&nbsp;({winnersQ.data?.total ?? 0})
       </h1>
 
       {/* Sort buttons */}
@@ -33,29 +32,32 @@ export default function WinnersPage() {
             key={col}
             className="btn btn-sm btn-outline"
             onClick={() => {
-              setSort(col);
-              setOrder(order === 'asc' ? 'desc' : 'asc');
+              dispatch(setSort(col));      // toggles order if same col
+              dispatch(setWinnersPage(1)); // reset to first page
             }}
           >
-            Sort by {col} {sort === col && (order === 'asc' ? '🔼' : '🔽')}
+            Sort by&nbsp;{col}&nbsp;
+            {sort === col && (order === 'asc' ? '🔼' : '🔽')}
           </button>
         ))}
       </div>
 
-      {/* Table */}
+      {/* Winners table */}
       <table className="min-w-full text-sm border">
         <thead className="bg-gray-100">
           <tr>
             <th className="px-2 py-1">#</th>
             <th>Car</th>
             <th>Wins</th>
-            <th>Best time, s</th>
+            <th>Best time&nbsp;(s)</th>
           </tr>
         </thead>
         <tbody>
           {winnersQ.data?.data.map((w, idx) => (
             <tr key={w.id} className="border-t">
-              <td className="px-2 text-center">{(page - 1) * LIMIT + idx + 1}</td>
+              <td className="px-2 text-center">
+                {(page - 1) * LIMIT + idx + 1}
+              </td>
               <td className="flex items-center gap-2">
                 <div
                   className="h-4 w-6 rounded"
@@ -63,23 +65,24 @@ export default function WinnersPage() {
                 />
                 {carById[w.id]?.name ?? `Car ${w.id}`}
               </td>
-              <td className="text-center text-gray-900">{w.wins}</td>
-              <td className="text-center text-gray-900">{(w.time / 1000).toFixed(2)}</td>
+              <td className="text-center">{w.wins}</td>
+              <td className="text-center">{(w.time / 1000).toFixed(2)}</td>
             </tr>
           ))}
         </tbody>
       </table>
 
+      {/* Pagination that uses Redux page counter */}
       {winnersQ.data && (
         <Pagination
           total={winnersQ.data.total}
           limit={LIMIT}
-          /* reuse same Pagination, but with local state */
-          {...{ page, setPage }}
+          source="winners"        /* ← tells Pagination which slice key to use */
         />
       )}
     </section>
   );
 }
+
 
   

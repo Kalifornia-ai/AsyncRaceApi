@@ -1,30 +1,30 @@
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { setPage } from '../../app/uiSlice';
+import { setGaragePage, setWinnersPage } from '../../app/uiSlice';
 
-export default function Pagination({ total, limit }: { total: number; limit: number }) {
+interface Props {
+  total: number;
+  limit: number;
+  source: 'garage' | 'winners';
+}
+
+export default function Pagination({ total, limit, source }: Props) {
+  const page = useAppSelector((s) =>
+    source === 'garage' ? s.ui.garagePage : s.ui.winnersPage
+  );
   const dispatch = useAppDispatch();
-  const page = useAppSelector((s) => s.ui.page);
-  const pages = Math.ceil(total / limit);
+  const pages = Math.max(1, Math.ceil(total / limit));
+
+  const go = (p: number) =>
+    source === 'garage'
+      ? dispatch(setGaragePage(p))
+      : dispatch(setWinnersPage(p));
 
   return (
-    <div className="join">
-      <button type="button"
-        className="join-item btn btn-sm"
-        disabled={page === 1}
-        onClick={() => dispatch(setPage(page - 1))}
-      >
-        «
-      </button>
-      <span className="join-item px-3 text-sm">
-        {page} / {pages || 1}
-      </span>
-      <button type="button"
-        className="join-item btn btn-sm"
-        disabled={page >= pages}
-        onClick={() => dispatch(setPage(page + 1))}
-      >
-        »
-      </button>
+    <div className="join mt-4">
+      <button className="btn join-item" disabled={page === 1}     onClick={() => go(page - 1)}>«</button>
+      <span   className="btn join-item pointer-events-none">{page} / {pages}</span>
+      <button className="btn join-item" disabled={page === pages} onClick={() => go(page + 1)}>»</button>
     </div>
   );
 }
+
