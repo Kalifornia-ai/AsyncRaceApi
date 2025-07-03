@@ -79,6 +79,7 @@ export const {
   useGetCarsQuery,
   useCreateCarMutation,
   useUpdateCarMutation,
+  useLazyGetCarsQuery,
   useDeleteCarMutation,
   useStartEngineMutation,
   useStopEngineMutation,

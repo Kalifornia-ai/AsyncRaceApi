@@ -1,23 +1,31 @@
+// src/api/winnersApi.ts
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
-export interface Winner { id: number; wins: number; time: number } // ms
+export interface Winner {
+  id:   number;
+  wins: number;
+  time: number;            // ms
+}
 
 export const winnersApi = createApi({
   reducerPath: 'winnersApi',
-  baseQuery: fetchBaseQuery({ baseUrl: 'http://localhost:3000' }),
+  baseQuery: fetchBaseQuery({
+    baseUrl: import.meta.env.VITE_API ?? 'http://localhost:3000',
+  }),
   tagTypes: ['Winners'],
   endpoints: (builder) => ({
+    /* ───────── GET /winners ───────── */
     getWinners: builder.query<
       { data: Winner[]; total: number },
-      { page: number; limit: number; sort: string; order: 'asc' | 'desc' }
+      { page: number; limit: number; sort: 'wins' | 'time'; order: 'asc' | 'desc' }
     >({
       query: ({ page, limit, sort, order }) => ({
         url: '/winners',
         params: { _page: page, _limit: limit, _sort: sort, _order: order },
       }),
-      transformResponse: (response: Winner[], meta) => ({
-        data: response,
-        total: Number(meta?.response?.headers.get('X-Total-Count') ?? response.length),
+      transformResponse: (res: Winner[], meta) => ({
+        data: res,
+        total: Number(meta?.response?.headers.get('X-Total-Count') ?? res.length),
       }),
       providesTags: (r) =>
         r
@@ -28,27 +36,46 @@ export const winnersApi = createApi({
           : [{ type: 'Winners', id: 'LIST' }],
     }),
 
+    /* ───────── POST /winners ───────── */
     createWinner: builder.mutation<Winner, Winner>({
       query: (body) => ({ url: '/winners', method: 'POST', body }),
       invalidatesTags: [{ type: 'Winners', id: 'LIST' }],
     }),
 
+    /* ───────── PUT /winners/:id ────── */
     updateWinner: builder.mutation<
-      Winner,
-      { id: number; wins: number; time: number }
-    >({
-      query: ({ id, ...patch }) => ({
-        url: `/winners/${id}`,
-        method: 'PUT',
-        body: patch,
-      }),
-      invalidatesTags: (r, e, { id }) => [{ type: 'Winners', id }],
+    Winner,
+    { id: number; deltaWin: number; newTime: number }
+  >({
+    query: ({ id, deltaWin, newTime }) => ({
+      url: `/winners/${id}`,
+      method: 'PATCH',
+      body: {             // json-server merges PATCH
+        wins: deltaWin,   // we’ll add this to the current value
+        time: newTime,    // we’ll compute Math.min on the server
+      },
+    }),
+    invalidatesTags: (_r, _e, { id }) => [
+      { type: 'Winners', id },
+      { type: 'Winners', id: 'LIST' },
+    ],
+  }),
+
+    /* ───────── DELETE /winners/:id ─── */
+    deleteWinner: builder.mutation<void, number>({
+      query: (id) => ({ url: `/winners/${id}`, method: 'DELETE' }),
+      invalidatesTags: (_r, _e, id) => [
+        { type: 'Winners', id },
+        { type: 'Winners', id: 'LIST' },
+      ],
     }),
   }),
 });
 
+/* RTK-Query hooks */
 export const {
   useGetWinnersQuery,
   useCreateWinnerMutation,
   useUpdateWinnerMutation,
+  useDeleteWinnerMutation,
 } = winnersApi;

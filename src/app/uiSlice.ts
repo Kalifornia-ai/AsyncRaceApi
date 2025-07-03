@@ -18,6 +18,8 @@ interface UIState {
   draftCar?: DraftCar;
   isRacing: boolean;
   banner:   string | null;
+  totalCars: number;
+
 }
 
 /* ───────────────── Initial ─────────────── */
@@ -29,6 +31,7 @@ const initialState: UIState = {
   selectedCarId: null,
   isRacing: false,
   banner:   null,
+  totalCars: 0,
 };
 
 /* ───────────────── Slice ───────────────── */
@@ -57,6 +60,8 @@ const uiSlice = createSlice({
       state.draftCar = payload;
     },
 
+    setTotalCars: (s, a: PayloadAction<number>) => { s.totalCars = a.payload },
+
     /* Race lifecycle */
     startRace(state) {
       state.isRacing = true;
@@ -70,6 +75,8 @@ const uiSlice = createSlice({
       state.isRacing = false;
       state.banner   = payload;
     },
+
+    
   },
 });
 
@@ -82,6 +89,7 @@ export const {
   selectCar,
   saveDraft,
   startRace,
+  setTotalCars, 
   resetRace,
   finishRace,
 } = uiSlice.actions;
