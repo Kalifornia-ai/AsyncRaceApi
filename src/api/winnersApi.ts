@@ -43,23 +43,21 @@ export const winnersApi = createApi({
     }),
 
     /* ───────── PUT /winners/:id ────── */
-    updateWinner: builder.mutation<
-    Winner,
-    { id: number; deltaWin: number; newTime: number }
-  >({
-    query: ({ id, deltaWin, newTime }) => ({
-      url: `/winners/${id}`,
-      method: 'PATCH',
-      body: {             // json-server merges PATCH
-        wins: deltaWin,   // we’ll add this to the current value
-        time: newTime,    // we’ll compute Math.min on the server
-      },
-    }),
-    invalidatesTags: (_r, _e, { id }) => [
-      { type: 'Winners', id },
-      { type: 'Winners', id: 'LIST' },
-    ],
-  }),
+   // PATCH /winners/:id  body → { wins, time }
+updateWinner: builder.mutation<
+Winner,
+{ id: number; wins: number; time: number }
+>({
+query: ({ id, ...body }) => ({
+  url: `/winners/${id}`,
+  method: 'PUT',
+  body,                      // { wins, time }
+}),
+invalidatesTags: (_r, _e, { id }) => [
+  { type: 'Winners', id },
+  { type: 'Winners', id: 'LIST' },
+],
+}),
 
     /* ───────── DELETE /winners/:id ─── */
     deleteWinner: builder.mutation<void, number>({

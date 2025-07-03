@@ -119,7 +119,7 @@ export default function CarForm() {
 
   /* ───── bulk delete first 100 cars ────────────────────────────── */
   const handleBulkDelete = async () => {
-    if (!window.confirm('Delete first 100 cars?')) return;
+    if (!window.confirm(`Delete first ${Math.min(100, resp?.total ?? 0)} cars?`)) return;
     setDeletingMany(true);
 
     try {
@@ -187,7 +187,7 @@ export default function CarForm() {
         type="button"
         className="btn btn-error"
         onClick={handleBulkDelete}
-        disabled={isDeletingMany}
+        disabled={isDeletingMany || isCreating || isUpdating}
       >
         {isDeletingMany ? 'Deleting…' : 'Delete 100 Cars'}
       </button>

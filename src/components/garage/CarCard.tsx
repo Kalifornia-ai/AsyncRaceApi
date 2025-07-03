@@ -1,49 +1,48 @@
 import { useState } from 'react';
 import { Car } from '../../types/car';
-import {
-  useDeleteCarMutation,
+
+import { useStartEngineMutation,
+    useStopEngineMutation,
+    useDriveEngineMutation,
+  useDeleteCarMutation
 } from '../../api/garageApi';
-import { useDriveEngineMutation, useStartEngineMutation, useStopEngineMutation } from '../../api/engineApi';
+
 import { useDeleteWinnerMutation } from '../../api/winnersApi';
+
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
-import { selectCar, setGaragePage } from '../../app/uiSlice';
+import {
+  startSingleCar,
+  stopSingleCar,
+  selectCar,
+  setGaragePage,
+} from '../../app/uiSlice';
 import { shouldRewindPage } from '../../utils/garage';
 
-interface Props {
-  car: Car;
-  onStart?: (id: number) => void; // parent animation hook (optional)
-  onStop?:  (id: number) => void;
-}
+const PAGE_LIMIT = 7;
 
-export default function CarCard({ car, onStart, onStop }: Props) {
+export default function CarCard({ car }: { car: Car }) {
   const dispatch = useAppDispatch();
-  const page     = useAppSelector((s) => s.ui.garagePage);
-  const total    = useAppSelector((s) => s.ui.totalCars);
+  const page   = useAppSelector((s) => s.ui.garagePage);
+  const total  = useAppSelector((s) => s.ui.totalCars);
 
-  /* RTK-Query hooks */
   const [deleteCar,   { isLoading: isDeleting }] = useDeleteCarMutation();
   const [deleteWinner]                           = useDeleteWinnerMutation();
   const [startEngine]                            = useStartEngineMutation();
   const [drive]                                  = useDriveEngineMutation();
   const [stopEngine]                             = useStopEngineMutation();
 
-  /* local running state (for button disables) */
   const [isRunning, setRunning] = useState(false);
 
-  /* ───────── handlers ───────── */
-
+  /* --- handlers -------------------------------------------------- */
   const handleStart = async () => {
     setRunning(true);
     try {
-      await startEngine({ id: car.id, status: 'started' }).unwrap();
-      onStart?.(car.id);
-
-      /* drive endpoint – if 500 cancel run */
-      await drive({ id: car.id, status: 'drive' }).unwrap();
-    
-    } catch (err) {
-      console.error(`Start/drive failed for car ${car.id}:`, err);
-      onStop?.(car.id);               // parent can cancel animation
+      await startEngine(car.id).unwrap(); // we ignore v/d
+      dispatch(startSingleCar(car.id));
+      await drive(car.id).unwrap();
+    } catch (e) {
+      console.error(e);
+      dispatch(stopSingleCar());
     } finally {
       setRunning(false);
     }
@@ -52,11 +51,9 @@ export default function CarCard({ car, onStart, onStop }: Props) {
   const handleStop = async () => {
     setRunning(true);
     try {
-      await stopEngine({ id: car.id, status: 'stopped' }).unwrap();
-      onStop?.(car.id);
-    } catch (err) {
-      console.error(`Failed to stop engine for ${car.id}:`, err);
+      await stopEngine(car.id).unwrap();
     } finally {
+      dispatch(stopSingleCar());
       setRunning(false);
     }
   };
@@ -65,63 +62,66 @@ export default function CarCard({ car, onStart, onStop }: Props) {
     if (!confirm(`Delete ${car.name}?`)) return;
     try {
       await deleteCar(car.id).unwrap();
-      await deleteWinner(car.id).unwrap().catch(() => {}); // ignore 404
-
+      await deleteWinner(car.id).unwrap().catch(() => {});
       const nextTotal = Math.max(0, total - 1);
-      if (shouldRewindPage(nextTotal, page, 7)) {
+      if (shouldRewindPage(nextTotal, page, PAGE_LIMIT))
         dispatch(setGaragePage(page - 1));
-      }
-    } catch (err) {
-      console.error(`Failed to delete car ${car.id}:`, err);
-      alert('Delete failed – see console.');
+    } catch {
+      alert('Delete failed – see console');
     }
   };
 
-  /* ───────── UI ───────── */
+  /* --- row ------------------------------------------------------- */
   return (
-    <div className="flex items-center justify-between p-2 border rounded shadow-sm">
-      <div className="flex items-center gap-3">
-        <svg width="48" height="24">
-          <rect width="48" height="24" rx="3" fill={car.color} />
-        </svg>
-        <span className="ml-2 font-medium text-gray-800">{car.name}</span>
-      </div>
+    <div className="flex items-center gap-3 h-10 bg-gray-100 rounded px-2">
+      <div
+        className="h-6 w-10 rounded"
+        style={{ backgroundColor: car.color }}
+      />
+      <span className="flex-1 text-sm font-medium truncate text-gray-800">
+        {car.name}
+      </span>
 
-      <div className="flex gap-2">
-        <button
-          className="btn btn-xs btn-success"
-          onClick={handleStart}
-          disabled={isRunning || isDeleting}
-        >
-          Start
-        </button>
-        <button
-          className="btn btn-xs btn-warning"
-          onClick={handleStop}
-          disabled={!isRunning || isDeleting}
-        >
-          Stop
-        </button>
-        <button
-          className="btn btn-xs btn-outline"
-          onClick={() => dispatch(selectCar(car.id))}
-          disabled={isRunning || isDeleting}
-          title="Edit"
-        >
-          ✏️
-        </button>
-        <button
-          className="btn btn-xs btn-error"
-          onClick={handleDelete}
-          disabled={isRunning || isDeleting}
-          title="Delete"
-        >
-          🗑
-        </button>
-      </div>
+      <button
+        className="btn btn-xs btn-success"
+        disabled={isRunning || isDeleting}
+        onClick={handleStart}
+      >
+        Start
+      </button>
+
+      <button
+        className="btn btn-xs btn-warning"
+        disabled={!isRunning || isDeleting}
+        onClick={handleStop}
+      >
+        Stop
+      </button>
+
+      <button
+        className="btn btn-xs btn-outline"
+        title="Edit"
+        disabled={isRunning || isDeleting}
+        onClick={() => dispatch(selectCar(car.id))}
+      >
+        ✏️
+      </button>
+
+      <button
+        className="btn btn-xs btn-error"
+        title="Delete"
+        disabled={isRunning || isDeleting}
+        onClick={handleDelete}
+      >
+        🗑
+      </button>
     </div>
   );
 }
+
+
+
+
 
 
 

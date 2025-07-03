@@ -8,23 +8,51 @@ interface Props {
 }
 
 export default function Pagination({ total, limit, source }: Props) {
+  /* current page from Redux */
   const page = useAppSelector((s) =>
     source === 'garage' ? s.ui.garagePage : s.ui.winnersPage
   );
+
   const dispatch = useAppDispatch();
+
+  /* how many pages exist (at least 1) */
   const pages = Math.max(1, Math.ceil(total / limit));
 
-  const go = (p: number) =>
-    source === 'garage'
-      ? dispatch(setGaragePage(p))
-      : dispatch(setWinnersPage(p));
+  /* early-return if no items at all */
+  if (total === 0) return null;
+
+  /* helper that clamps target page 1…pages */
+  const go = (p: number) => {
+    const target = Math.min(Math.max(p, 1), pages);
+    if (source === 'garage') dispatch(setGaragePage(target));
+    else                     dispatch(setWinnersPage(target));
+  };
 
   return (
     <div className="join mt-4">
-      <button className="btn join-item" disabled={page === 1}     onClick={() => go(page - 1)}>«</button>
-      <span   className="btn join-item pointer-events-none">{page} / {pages}</span>
-      <button className="btn join-item" disabled={page === pages} onClick={() => go(page + 1)}>»</button>
+      <button
+        type="button"
+        className="btn join-item"
+        disabled={page === 1}
+        onClick={() => go(page - 1)}
+      >
+        «
+      </button>
+
+      <span className="btn join-item pointer-events-none">
+        {page} / {pages}
+      </span>
+
+      <button
+        type="button"
+        className="btn join-item"
+        disabled={page === pages}
+        onClick={() => go(page + 1)}
+      >
+        »
+      </button>
     </div>
   );
 }
+
 

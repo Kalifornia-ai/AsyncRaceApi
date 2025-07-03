@@ -9,6 +9,7 @@ export const garageApi = createApi({
   baseQuery: fetchBaseQuery({ baseUrl: API_URL }),
   tagTypes: ['Cars'],
   endpoints: (builder) => ({
+    /* ───────── Cars ───────── */
     getCars: builder.query<
       { data: Car[]; total: number },
       { page: number; limit: number }
@@ -44,18 +45,18 @@ export const garageApi = createApi({
         method: 'PATCH',
         body: patch,
       }),
-      invalidatesTags: (result, error, { id }) => [{ type: 'Cars', id }],
+      invalidatesTags: (_r, _e, { id }) => [{ type: 'Cars', id }],
     }),
 
     deleteCar: builder.mutation<{ id: number }, number>({
       query: (id) => ({ url: `/garage/${id}`, method: 'DELETE' }),
-      invalidatesTags: (result, error, id) => [
+      invalidatesTags: (_r, _e, id) => [
         { type: 'Cars', id },
         { type: 'Cars', id: 'PARTIAL-LIST' },
       ],
     }),
 
-    // Engine controls for individual race lanes
+    /* ───────── Engine ───────── */
     startEngine: builder.mutation<
       { velocity: number; distance: number; id: number },
       number
@@ -72,9 +73,17 @@ export const garageApi = createApi({
         method: 'PATCH',
       }),
     }),
-  }),
-});
 
+    driveEngine: builder.mutation<{ success: boolean }, number>({
+      query: (id) => ({
+        url: `/engine?id=${id}&status=drive`,
+        method: 'PATCH',
+      }),
+    }),
+  }),       // ← closes endpoints
+});         // ← closes createApi
+
+/* ───────── Hooks ───────── */
 export const {
   useGetCarsQuery,
   useCreateCarMutation,
@@ -83,4 +92,6 @@ export const {
   useDeleteCarMutation,
   useStartEngineMutation,
   useStopEngineMutation,
+  useDriveEngineMutation,
 } = garageApi;
+

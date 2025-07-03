@@ -1,4 +1,3 @@
-/* src/pages/GaragePage.tsx */
 import { useEffect, useRef, useMemo } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { useGetCarsQuery } from '../api/garageApi';
@@ -10,16 +9,17 @@ import {
   setGaragePage,
 } from '../app/uiSlice';
 
-import CarForm     from '../components/garage/CarForm';
-import CarCard     from '../components/garage/CarCard';
-import Pagination  from '../components/garage/Pagination';
+import CarForm from '../components/garage/CarForm';
+import CarCard from '../components/garage/CarCard';
+import Pagination from '../components/garage/Pagination';
 import RaceTrack, { RaceTrackHandles } from '../components/garage/RaceTrack';
 
 const PAGE_LIMIT = 7;
 
 export default function GaragePage() {
-  const dispatch   = useAppDispatch();
-  const page       = useAppSelector((s) => s.ui.garagePage);
+  const dispatch  = useAppDispatch();
+  const page      = useAppSelector((s) => s.ui.garagePage);
+  const singleId  = useAppSelector((s) => s.ui.singleCarId);
   const { isRacing, banner } = useAppSelector((s) => s.ui);
 
   const { data, isFetching, error } = useGetCarsQuery({
@@ -29,23 +29,29 @@ export default function GaragePage() {
 
   const trackRef = useRef<RaceTrackHandles>(null);
 
-  /* ── stop any running animations on unmount ─────────── */
-  useEffect(() => () => trackRef.current?.stopAll(), []);
+  /* ─── mount / unmount ─────────────────────────────────────────── */
+  useEffect(() => {
+    /* reset any stale race state once on mount */
+    dispatch(resetRace());
 
-  /* ── keep totalCars in Redux ─────────────────────────── */
+    /* cancel CSS animations if we navigate away from Garage */
+    return () => trackRef.current?.stopAll();
+  }, [dispatch]);
+
+  /* ─── keep totalCars in Redux ─────────────────────────────────── */
   useEffect(() => {
     if (data?.total !== undefined) dispatch(setTotalCars(data.total));
   }, [data?.total, dispatch]);
 
-  /* ── clamp invalid page numbers (after bulk deletes) ─── */
+  /* ─── clamp page number after bulk deletes ────────────────────── */
   useEffect(() => {
     if (data?.total) {
-      const lastPage = Math.max(1, Math.ceil(data.total / PAGE_LIMIT));
-      if (page > lastPage) dispatch(setGaragePage(lastPage));
+      const last = Math.max(1, Math.ceil(data.total / PAGE_LIMIT));
+      if (page > last) dispatch(setGaragePage(last));
     }
   }, [data?.total, page, dispatch]);
 
-  /* ── handle errors up-front ──────────────────────────── */
+  /* ─── early error ─────────────────────────────────────────────── */
   if (error) {
     const msg =
       'status' in error
@@ -54,16 +60,15 @@ export default function GaragePage() {
     return <p className="text-red-600">Error: {msg}</p>;
   }
 
-  /* ── memoise card list so form typing doesn’t rerender all rows ─ */
-  const carRows = useMemo(
-    () =>
-      data?.data.map((car) => <CarCard key={car.id} car={car} />) ?? [],
-    [data?.data]
+  /* ─── memoised car rows ───────────────────────────────────────── */
+  const rows = useMemo(
+    () => data?.data.map((c) => <CarCard key={c.id} car={c} />) ?? [],
+    [data?.data],
   );
 
+  /* ─── render ──────────────────────────────────────────────────── */
   return (
     <section className="space-y-6">
-      {/* banner survives navigation */}
       {banner && (
         <div className="rounded bg-green-100 text-green-800 px-3 py-2">
           {banner}
@@ -76,14 +81,12 @@ export default function GaragePage() {
 
       <CarForm />
 
-      {/* empty-garage message */}
       {data?.total === 0 && !isFetching && (
         <p className="text-center italic text-gray-500">
           No cars in the garage yet—create one above!
         </p>
       )}
 
-      {/* skeleton loader */}
       {isFetching && (
         <div className="space-y-2 animate-pulse">
           {Array.from({ length: PAGE_LIMIT }).map((_, i) => (
@@ -92,8 +95,10 @@ export default function GaragePage() {
         </div>
       )}
 
-      {/* car list */}
-      {!isFetching && <div className="space-y-2">{carRows}</div>}
+      {!isFetching && <div className="space-y-2">{rows}</div>}
+
+      {/* lanes for individual “Start” runs are mounted here by CarCard */}
+      <div id="car-lanes" className="space-y-2 mt-4" />
 
       {/* race controls */}
       <div className="flex gap-4">
@@ -118,8 +123,8 @@ export default function GaragePage() {
         </button>
       </div>
 
-      {/* live race track */}
-      {isRacing && data?.data && (
+      {/* track is shown for full race OR while a single lane is running */}
+      {(isRacing || singleId !== null) && data?.data && (
         <RaceTrack
           ref={trackRef}
           cars={data.data}
@@ -127,7 +132,6 @@ export default function GaragePage() {
         />
       )}
 
-      {/* pagination */}
       {data && (
         <Pagination
           total={data.total}
