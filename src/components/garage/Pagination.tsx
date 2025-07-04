@@ -5,9 +5,10 @@ interface Props {
   total: number;
   limit: number;
   source: 'garage' | 'winners';
+  disabled?: boolean;  
 }
 
-export default function Pagination({ total, limit, source }: Props) {
+export default function Pagination({ total, limit, source, disabled = false, }: Props) {
   /* current page from Redux */
   const page = useAppSelector((s) =>
     source === 'garage' ? s.ui.garagePage : s.ui.winnersPage
@@ -33,7 +34,7 @@ export default function Pagination({ total, limit, source }: Props) {
       <button
         type="button"
         className="btn join-item"
-        disabled={page === 1}
+        disabled={disabled || page === 1}
         onClick={() => go(page - 1)}
       >
         «
@@ -46,7 +47,7 @@ export default function Pagination({ total, limit, source }: Props) {
       <button
         type="button"
         className="btn join-item"
-        disabled={page === pages}
+        disabled={disabled || page === pages}
         onClick={() => go(page + 1)}
       >
         »

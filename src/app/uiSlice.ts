@@ -20,6 +20,7 @@ interface UIState {
   banner:   string | null;
   totalCars: number;
   singleCarId:   number | null;
+  trackVisible: boolean, 
 
 }
 
@@ -34,6 +35,7 @@ const initialState: UIState = {
   banner:   null,
   totalCars: 0,
   singleCarId:  null,
+  trackVisible: false,
 };
 
 /* ───────────────── Slice ───────────────── */
@@ -69,14 +71,18 @@ const uiSlice = createSlice({
       state.isRacing = true;
       state.singleCarId = null;
       state.banner   = null;
+      state.trackVisible = true; 
     },
     resetRace(state) {
       state.isRacing = false;
       state.banner   = null;
+      state.trackVisible = false; 
+      state.singleCarId  = null;
     },
     finishRace(state, { payload }: PayloadAction<string>) {
       state.isRacing = false;
       state.banner   = payload;
+
     },
     startSingleCar: (s,a: PayloadAction<number>) => { s.singleCarId = a.payload },
     stopSingleCar:  (s) => { s.singleCarId = null },

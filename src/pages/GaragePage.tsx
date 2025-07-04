@@ -8,24 +8,54 @@ import {
   setTotalCars,
   setGaragePage,
 } from '../app/uiSlice';
+import type { Car } from '../types/car';
 
 import CarForm from '../components/garage/CarForm';
 import CarCard from '../components/garage/CarCard';
 import Pagination from '../components/garage/Pagination';
 import RaceTrack, { RaceTrackHandles } from '../components/garage/RaceTrack';
 
-const PAGE_LIMIT = 7;
+const PAGE_LIMIT = 10;
 
 export default function GaragePage() {
   const dispatch  = useAppDispatch();
   const page      = useAppSelector((s) => s.ui.garagePage);
-  const singleId  = useAppSelector((s) => s.ui.singleCarId);
-  const { isRacing, banner } = useAppSelector((s) => s.ui);
+  const prevPage = useRef(page);
+  const { isRacing, singleCarId, banner, trackVisible } = useAppSelector((s) => s.ui);
+  const anyRunning = isRacing || singleCarId !== null;
+  const fullRace   = isRacing;
+  const singleRun  = singleCarId !== null;
 
   const { data, isFetching, error } = useGetCarsQuery({
     page,
     limit: PAGE_LIMIT,
   });
+ // keep the "grid" cars until the user clicks Reset
+ const raceCarsRef = useRef<Car[] | null>(null);
+
+ // take a snapshot when a full race starts
+ useEffect(() => {
+   if (isRacing && data?.data) {             // startRace() just dispatched
+     raceCarsRef.current = data.data;        // freeze current page
+   }
+ }, [isRacing, data?.data]);
+
+
+useEffect(() => {
+     if (prevPage.current !== page && !isRacing && singleCarId === null) {
+       raceCarsRef.current = null;          // forget the snapshot
+       dispatch(resetRace());               // clears trackVisible
+     }
+     prevPage.current = page;
+    }, [page, isRacing, singleCarId, dispatch]);
+
+ // clear the snapshot on Reset
+ const handleReset = () => {
+   trackRef.current?.stopAll();
+   trackRef.current?.resetAll();
+   raceCarsRef.current = null;               // allow fresh page later
+   dispatch(resetRace());
+ };
 
   const trackRef = useRef<RaceTrackHandles>(null);
 
@@ -35,7 +65,10 @@ export default function GaragePage() {
     dispatch(resetRace());
 
     /* cancel CSS animations if we navigate away from Garage */
-    return () => trackRef.current?.stopAll();
+    return () => {
+        trackRef.current?.stopAll();   // keeps parked lanes from animating
+       dispatch(resetRace());         // ← NEW: clear isRacing + trackVisible
+      };
   }, [dispatch]);
 
   /* ─── keep totalCars in Redux ─────────────────────────────────── */
@@ -104,7 +137,7 @@ export default function GaragePage() {
       <div className="flex gap-4">
         <button
           className="btn btn-success"
-          disabled={isRacing || (data?.data?.length ?? 0) === 0}
+          disabled={anyRunning || trackVisible || (data?.data?.length ?? 0) === 0}
           onClick={() => dispatch(startRace())}
         >
           Race
@@ -112,22 +145,21 @@ export default function GaragePage() {
 
         <button
           className="btn btn-outline"
-          disabled={!isRacing}
-          onClick={() => {
-            trackRef.current?.stopAll();
-            trackRef.current?.resetAll();
-            dispatch(resetRace());
-          }}
+          disabled={fullRace || !singleRun} 
+          onClick={handleReset}
         >
           Reset
         </button>
       </div>
 
       {/* track is shown for full race OR while a single lane is running */}
-      {(isRacing || singleId !== null) && data?.data && (
+      {(trackVisible || singleCarId !== null) && (
         <RaceTrack
           ref={trackRef}
-          cars={data.data}
+         cars={trackVisible                       // full-race grid
+              ? raceCarsRef.current ?? data?.data ?? []
+              : data?.data.filter((c) => c.id === singleCarId) ?? []}
+            active={isRacing || singleCarId !== null}
           onRaceEnd={(msg) => dispatch(finishRace(msg))}
         />
       )}
@@ -137,6 +169,7 @@ export default function GaragePage() {
           total={data.total}
           limit={PAGE_LIMIT}
           source="garage"
+          disabled={anyRunning}
         />
       )}
     </section>

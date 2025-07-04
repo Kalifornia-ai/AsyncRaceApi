@@ -16,6 +16,8 @@ export default function CarForm() {
   const dispatch          = useAppDispatch();
   const selectedId        = useAppSelector((s) => s.ui.selectedCarId);
   const draft             = useAppSelector((s) => s.ui.draftCar);
+  const { isRacing, singleCarId} = useAppSelector((s) => s.ui);
+  const anyRunning = isRacing || singleCarId !== null; 
 
   /* current car list (to pre-fill form) */
   const { data: resp, refetch: refetchCars } =
@@ -178,7 +180,7 @@ export default function CarForm() {
         type="button"
         className="btn btn-secondary"
         onClick={handleGenerate}
-        disabled={isCreating || isGenerating}
+        disabled={isCreating || isGenerating || anyRunning }
       >
         {isGenerating ? 'Generating…' : 'Generate 100 Random Cars'}
       </button>
@@ -187,7 +189,7 @@ export default function CarForm() {
         type="button"
         className="btn btn-error"
         onClick={handleBulkDelete}
-        disabled={isDeletingMany || isCreating || isUpdating}
+        disabled={isDeletingMany || isCreating || isUpdating || anyRunning}
       >
         {isDeletingMany ? 'Deleting…' : 'Delete 100 Cars'}
       </button>

@@ -1,9 +1,7 @@
-import { useState } from 'react';
 import { Car } from '../../types/car';
 
-import { useStartEngineMutation,
+import { 
     useStopEngineMutation,
-    useDriveEngineMutation,
   useDeleteCarMutation
 } from '../../api/garageApi';
 
@@ -18,45 +16,28 @@ import {
 } from '../../app/uiSlice';
 import { shouldRewindPage } from '../../utils/garage';
 
-const PAGE_LIMIT = 7;
+const PAGE_LIMIT = 10;
 
 export default function CarCard({ car }: { car: Car }) {
   const dispatch = useAppDispatch();
   const page   = useAppSelector((s) => s.ui.garagePage);
   const total  = useAppSelector((s) => s.ui.totalCars);
+  const { isRacing, singleCarId } = useAppSelector((s) => s.ui);
+  const anyRunning = isRacing || singleCarId !== null;       
+  const isCurrent  = singleCarId === car.id;     
 
   const [deleteCar,   { isLoading: isDeleting }] = useDeleteCarMutation();
   const [deleteWinner]                           = useDeleteWinnerMutation();
-  const [startEngine]                            = useStartEngineMutation();
-  const [drive]                                  = useDriveEngineMutation();
   const [stopEngine]                             = useStopEngineMutation();
 
-  const [isRunning, setRunning] = useState(false);
+
 
   /* --- handlers -------------------------------------------------- */
-  const handleStart = async () => {
-    setRunning(true);
-    try {
-      await startEngine(car.id).unwrap(); // we ignore v/d
-      dispatch(startSingleCar(car.id));
-      await drive(car.id).unwrap();
-    } catch (e) {
-      console.error(e);
-      dispatch(stopSingleCar());
-    } finally {
-      setRunning(false);
-    }
-  };
+  const handleStart = () => dispatch(startSingleCar(car.id));
 
   const handleStop = async () => {
-    setRunning(true);
-    try {
-      await stopEngine(car.id).unwrap();
-    } finally {
-      dispatch(stopSingleCar());
-      setRunning(false);
-    }
-  };
+    await stopEngine(car.id).unwrap().catch(console.error); 
+    dispatch(stopSingleCar());}
 
   const handleDelete = async () => {
     if (!confirm(`Delete ${car.name}?`)) return;
@@ -84,7 +65,7 @@ export default function CarCard({ car }: { car: Car }) {
 
       <button
         className="btn btn-xs btn-success"
-        disabled={isRunning || isDeleting}
+        disabled={anyRunning|| isDeleting}
         onClick={handleStart}
       >
         Start
@@ -92,7 +73,7 @@ export default function CarCard({ car }: { car: Car }) {
 
       <button
         className="btn btn-xs btn-warning"
-        disabled={!isRunning || isDeleting}
+        disabled={!isCurrent || isDeleting}
         onClick={handleStop}
       >
         Stop
@@ -101,7 +82,7 @@ export default function CarCard({ car }: { car: Car }) {
       <button
         className="btn btn-xs btn-outline"
         title="Edit"
-        disabled={isRunning || isDeleting}
+        disabled={anyRunning || isDeleting}
         onClick={() => dispatch(selectCar(car.id))}
       >
         ✏️
@@ -110,7 +91,7 @@ export default function CarCard({ car }: { car: Car }) {
       <button
         className="btn btn-xs btn-error"
         title="Delete"
-        disabled={isRunning || isDeleting}
+        disabled={anyRunning || isDeleting}
         onClick={handleDelete}
       >
         🗑

@@ -1,4 +1,5 @@
 /* src/components/garage/RaceTrack.tsx */
+import { useEffect } from 'react';
 import {
     forwardRef,
     useImperativeHandle,
@@ -33,13 +34,16 @@ import {
   interface Props {
     cars: Car[];
     onRaceEnd(msg: string): void;
+    active: boolean; 
   }
   
   /* ------------------------------------------------------------------ */
   const RaceTrack = forwardRef<RaceTrackHandles, Props>(
-    ({ cars, onRaceEnd }, ref) => {
+    ({ cars, active, onRaceEnd }, ref) => {
       /* ---- global UI slice ---- */
+      const isAlive = useRef(true);
       const singleId = useAppSelector((s) => s.ui.singleCarId);
+      const alreadyFinished = useRef(false);
   
       /* lanes to animate for this run (memoised) */
       const carsToAnimate = useMemo(
@@ -57,6 +61,11 @@ import {
       /* ---- DOM refs ---- */
       const lanes    = useRef<Record<number, HTMLDivElement | null>>({});
       const finished = useRef(false);
+
+
+      useEffect(() => {
+        if (active) alreadyFinished.current = false;
+      }, [active]);
   
       /* ---- public handles ---- */
       useImperativeHandle(
@@ -82,7 +91,9 @@ import {
   
       /* ---- animation / race logic ---- */
       useLayoutEffect(() => {
-        if (carsToAnimate.length === 0) return;                // nothing to run
+
+            if (alreadyFinished.current) return;          // ① block re-runs
+          if (!active || carsToAnimate.length === 0) return;
   
         const controller = new AbortController();
         const { signal } = controller;
@@ -106,8 +117,8 @@ import {
               const rowW   = lane.parentElement!.getBoundingClientRect().width;
               const carW   = lane.getBoundingClientRect().width;
               const free   = Math.max(rowW - carW - 8, 0);
-              const travel = Math.max(20, Math.min(distance, free));
-              const durMs  = (travel / velocity) * 1000;
+              const travel = free; 
+              const durMs  = (free / velocity) * 1000; 
   
               lane.animate(
                 [
@@ -128,7 +139,8 @@ import {
               return { id: car.id, time: success ? durMs : Infinity };
             }),
           );
-  
+            
+          if (!isAlive.current) return;
           /* 4️⃣  single-car run finishes here */
           if (singleId) return;
   
@@ -138,47 +150,45 @@ import {
             { id: -1 as number, time: Infinity },
           );
           finished.current = true;
-  
+          alreadyFinished.current = true;
+          const winnerCar = cars.find((c) => c.id === winner.id);
           onRaceEnd(
             winner.id === -1
               ? 'No car finished the race 🏳'
-              : `🏆 Car #${winner.id} wins in ${(winner.time / 1000).toFixed(2)} s`,
+              : `🏆 ${(winnerCar?.name ?? `Car #${winner.id}`)} wins in ${(winner.time / 1000).toFixed(2)} s`,
           );
           if (winner.id === -1) return;
   
           /* 6️⃣  upsert winner row */
           try {
-            const res = await fetch(
-              `${import.meta.env.VITE_API ?? 'http://localhost:3000'}/winners/${winner.id}`,
-            );
+    
+            const res = await fetch(`${import.meta.env.VITE_API}/winners/${winner.id}`);
   
             if (res.ok) {
-              const row: { wins: number; time: number } = await res.json();
-              await updateWinner({
-                id:   winner.id,
-                wins: row.wins + 1,
-                time: Math.min(row.time, winner.time),
-              }).unwrap();
-            } else if (res.status === 404) {
-              await createWinner({ id: winner.id, wins: 1, time: winner.time }).unwrap();
-            } else {
-              console.error(`GET /winners/${winner.id} → ${res.status}`);
+                const row = await res.json();
+                await updateWinner({ id: winner.id, wins: row.wins + 1, time: Math.min(row.time, winner.time) });
+              } else if (res.status === 404) {
+                await createWinner({ id: winner.id, wins: 1, time: winner.time });
+              }
+            } catch (e) {
+              console.error('Winner upsert failed', e);
             }
-          } catch (e) {
-            console.error('Winner upsert failed', e);
-          }
         })();
   
         /* ---- cleanup ---- */
         return () => {
           controller.abort();                                 // cancel fetches
-          Object.values(lanes.current).forEach((lane) =>       // cancel CSS anims
-            lane?.getAnimations().forEach((a) => a.cancel()),
-          );
+          isAlive.current = false;  
+           if (!finished.current) {         // rewind only if we never declared a winner
+               Object.values(lanes.current).forEach((lane) =>
+                 lane?.getAnimations().forEach((a) => a.cancel()),
+               );
+             }
         };
       }, [
         carsToAnimate,
         singleId,
+        active,  
         startEngine,
         drive,
         stopEngine,
