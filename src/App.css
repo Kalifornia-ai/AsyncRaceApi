@@ -2,7 +2,7 @@
   max-width: 1280px;
   margin: 0 auto;
   padding: 2rem;
-  width: 100%;  
+  width: 100%;
 }
 
 .logo {
@@ -35,6 +35,15 @@
 
 .card {
   padding: 2em;
+}
+
+.car-label {
+  position: absolute;
+  left: 2.75rem; /* 40 px sprite + 0.75 rem gap */
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .read-the-docs {

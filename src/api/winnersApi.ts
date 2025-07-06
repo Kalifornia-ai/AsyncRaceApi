@@ -2,9 +2,9 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
 export interface Winner {
-  id:   number;
+  id: number;
   wins: number;
-  time: number;            // ms
+  time: number; // ms
 }
 
 export const winnersApi = createApi({
@@ -43,21 +43,18 @@ export const winnersApi = createApi({
     }),
 
     /* ───────── PUT /winners/:id ────── */
-   // PATCH /winners/:id  body → { wins, time }
-updateWinner: builder.mutation<
-Winner,
-{ id: number; wins: number; time: number }
->({
-query: ({ id, ...body }) => ({
-  url: `/winners/${id}`,
-  method: 'PUT',
-  body,                      // { wins, time }
-}),
-invalidatesTags: (_r, _e, { id }) => [
-  { type: 'Winners', id },
-  { type: 'Winners', id: 'LIST' },
-],
-}),
+    // PATCH /winners/:id  body → { wins, time }
+    updateWinner: builder.mutation<Winner, { id: number; wins: number; time: number }>({
+      query: ({ id, ...body }) => ({
+        url: `/winners/${id}`,
+        method: 'PUT',
+        body, // { wins, time }
+      }),
+      invalidatesTags: (_r, _e, { id }) => [
+        { type: 'Winners', id },
+        { type: 'Winners', id: 'LIST' },
+      ],
+    }),
 
     /* ───────── DELETE /winners/:id ─── */
     deleteWinner: builder.mutation<void, number>({

@@ -10,18 +10,12 @@ export const garageApi = createApi({
   tagTypes: ['Cars'],
   endpoints: (builder) => ({
     /* ───────── Cars ───────── */
-    getCars: builder.query<
-      { data: Car[]; total: number },
-      { page: number; limit: number }
-    >({
+    getCars: builder.query<{ data: Car[]; total: number }, { page: number; limit: number }>({
       query: ({ page, limit }) => ({
         url: '/garage',
         params: { _page: page, _limit: limit },
       }),
-      transformResponse: (
-        response: Car[],
-        meta: FetchBaseQueryMeta | undefined
-      ) => ({
+      transformResponse: (response: Car[], meta: FetchBaseQueryMeta | undefined) => ({
         data: response,
         total: Number(meta?.response?.headers.get('X-Total-Count') ?? 0),
       }),
@@ -57,10 +51,7 @@ export const garageApi = createApi({
     }),
 
     /* ───────── Engine ───────── */
-    startEngine: builder.mutation<
-      { velocity: number; distance: number; id: number },
-      number
-    >({
+    startEngine: builder.mutation<{ velocity: number; distance: number; id: number }, number>({
       query: (id) => ({
         url: `/engine?id=${id}&status=started`,
         method: 'PATCH',
@@ -80,8 +71,8 @@ export const garageApi = createApi({
         method: 'PATCH',
       }),
     }),
-  }),       // ← closes endpoints
-});         // ← closes createApi
+  }), // ← closes endpoints
+}); // ← closes createApi
 
 /* ───────── Hooks ───────── */
 export const {
@@ -94,4 +85,3 @@ export const {
   useStopEngineMutation,
   useDriveEngineMutation,
 } = garageApi;
-

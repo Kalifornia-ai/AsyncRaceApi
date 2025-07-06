@@ -10,17 +10,13 @@ function App() {
         <NavLink
           to="/"
           end
-          className={({ isActive }) =>
-            isActive ? 'text-blue-600 underline' : 'text-gray-700'
-          }
+          className={({ isActive }) => (isActive ? 'text-blue-600 underline' : 'text-gray-700')}
         >
           Garage
         </NavLink>
         <NavLink
           to="/winners"
-          className={({ isActive }) =>
-            isActive ? 'text-blue-600 underline' : 'text-gray-700'
-          }
+          className={({ isActive }) => (isActive ? 'text-blue-600 underline' : 'text-gray-700')}
         >
           Winners
         </NavLink>
@@ -36,4 +32,3 @@ function App() {
 }
 
 export default App;
-

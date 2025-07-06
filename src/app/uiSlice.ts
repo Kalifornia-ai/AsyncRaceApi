@@ -1,41 +1,42 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 /* ───────────────── Types ───────────────── */
-export type SortKey   = 'wins' | 'time';
-export type SortOrder = 'asc'  | 'desc';
+export type SortKey = 'wins' | 'time';
+export type SortOrder = 'asc' | 'desc';
 
 interface DraftCar {
-  name:  string;
+  name: string;
   color: string;
 }
 
 interface UIState {
-  garagePage:  number;
+  garagePage: number;
   winnersPage: number;
-  sort:  SortKey;
+  sort: SortKey;
   order: SortOrder;
   selectedCarId: number | null;
   draftCar?: DraftCar;
   isRacing: boolean;
-  banner:   string | null;
+  banner: string | null;
   totalCars: number;
-  singleCarId:   number | null;
-  trackVisible: boolean, 
-
+  singleCarId: number | null;
+  trackVisible: boolean;
+  failedCars: number[];
 }
 
 /* ───────────────── Initial ─────────────── */
 const initialState: UIState = {
-  garagePage:  1,
+  garagePage: 1,
   winnersPage: 1,
-  sort:  'wins',
+  sort: 'wins',
   order: 'desc',
   selectedCarId: null,
   isRacing: false,
-  banner:   null,
+  banner: null,
   totalCars: 0,
-  singleCarId:  null,
+  singleCarId: null,
   trackVisible: false,
+  failedCars: [],
 };
 
 /* ───────────────── Slice ───────────────── */
@@ -44,50 +45,76 @@ const uiSlice = createSlice({
   initialState,
   reducers: {
     /* Pagination */
-    setGaragePage(state, { payload }: PayloadAction<number>)  { state.garagePage  = payload; },
-    setWinnersPage(state, { payload }: PayloadAction<number>) { state.winnersPage = payload; },
+    setGaragePage(state, { payload }: PayloadAction<number>) {
+      state.garagePage = payload;
+    },
+    setWinnersPage(state, { payload }: PayloadAction<number>) {
+      state.winnersPage = payload;
+      // nuke any running race when you go look at Winners
+      state.isRacing = false;
+      state.trackVisible = false;
+      state.singleCarId = null;
+      state.banner = null;
+      state.failedCars = [];
+    },
 
     /* Winners sort */
     setSort(state, { payload }: PayloadAction<SortKey>) {
       if (state.sort === payload) {
         state.order = state.order === 'asc' ? 'desc' : 'asc';
       } else {
-        state.sort  = payload;
+        state.sort = payload;
         state.order = 'asc';
       }
     },
-    setOrder(state, { payload }: PayloadAction<SortOrder>) { state.order = payload; },
+    setOrder(state, { payload }: PayloadAction<SortOrder>) {
+      state.order = payload;
+    },
 
     /* Car selection & draft */
-    selectCar(state, { payload }: PayloadAction<number | null>) { state.selectedCarId = payload; },
+    selectCar(state, { payload }: PayloadAction<number | null>) {
+      state.selectedCarId = payload;
+    },
     saveDraft(state, { payload }: PayloadAction<DraftCar | undefined>) {
       state.draftCar = payload;
     },
 
-    setTotalCars: (s, a: PayloadAction<number>) => { s.totalCars = a.payload },
+    setTotalCars: (s, a: PayloadAction<number>) => {
+      s.totalCars = a.payload;
+    },
 
     /* Race lifecycle */
     startRace(state) {
       state.isRacing = true;
       state.singleCarId = null;
-      state.banner   = null;
-      state.trackVisible = true; 
+      state.banner = null;
+      state.failedCars = [];
+      state.trackVisible = true;
     },
     resetRace(state) {
       state.isRacing = false;
-      state.banner   = null;
-      state.trackVisible = false; 
-      state.singleCarId  = null;
+      state.banner = null;
+      state.trackVisible = false;
+      state.singleCarId = null;
+      state.failedCars = [];
     },
     finishRace(state, { payload }: PayloadAction<string>) {
       state.isRacing = false;
-      state.banner   = payload;
-
+      state.banner = payload;
+      state.singleCarId = null;
     },
-    startSingleCar: (s,a: PayloadAction<number>) => { s.singleCarId = a.payload },
-    stopSingleCar:  (s) => { s.singleCarId = null },
+    startSingleCar: (s, a: PayloadAction<number>) => {
+      s.singleCarId = a.payload;
+      s.trackVisible = true; // keep lanes mounted while the car runs
+      s.banner = null; // (optional) clear any old winner text
+    },
+    stopSingleCar: (s) => {
+      s.singleCarId = null;
+    },
 
-    
+    markCarFailed: (s, a: PayloadAction<number>) => {
+      if (!s.failedCars.includes(a.payload)) s.failedCars.push(a.payload);
+    },
   },
 });
 
@@ -100,12 +127,12 @@ export const {
   selectCar,
   saveDraft,
   startRace,
-  setTotalCars, 
+  setTotalCars,
   resetRace,
   finishRace,
-  startSingleCar, stopSingleCar,
+  startSingleCar,
+  stopSingleCar,
+  markCarFailed,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;
-
-

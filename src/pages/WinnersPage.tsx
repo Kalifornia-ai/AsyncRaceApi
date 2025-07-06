@@ -1,9 +1,12 @@
 /* src/pages/WinnersPage.tsx */
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { useGetWinnersQuery } from '../api/winnersApi';
 import { useGetCarsQuery } from '../api/garageApi';
 import Pagination from '../components/garage/Pagination';
-import { setWinnersPage, setSort } from '../app/uiSlice';
+import { setWinnersPage, setSort, resetRace } from '../app/uiSlice';
+
 
 const LIMIT = 10;
 
@@ -14,11 +17,18 @@ export default function WinnersPage() {
 
   /* --- Data fetches --- */
   const winnersQ = useGetWinnersQuery({ page, limit: LIMIT, sort, order });
-  const carsQ    = useGetCarsQuery({ page: 1, limit: 1000 }); // names & colours
+  const carsQ = useGetCarsQuery({ page: 1, limit: 1000 }); // names & colours
 
-  const carById = Object.fromEntries(
-    (carsQ.data?.data ?? []).map((c) => [c.id, c])
-  );
+  const carById = Object.fromEntries((carsQ.data?.data ?? []).map((c) => [c.id, c]));
+
+  const location = useLocation();
+
+  useEffect(() => {
+    // whenever the URL becomes /winners, clear any running race
+    if (location.pathname === '/winners') {
+      dispatch(resetRace());
+    }
+  }, [dispatch, location.pathname]);
 
   /* --- Early error guard --- */
   if (winnersQ.error) {
@@ -38,11 +48,11 @@ export default function WinnersPage() {
       {/* Sort buttons */}
       <div className="flex gap-4">
         {(['wins', 'time'] as const).map((col) => (
-          <button
+          <button type="button"
             key={col}
             className="btn btn-sm btn-outline cursor-pointer"
             onClick={() => {
-              dispatch(setSort(col));      // toggles order if same col
+              dispatch(setSort(col)); // toggles order if same col
               dispatch(setWinnersPage(1)); // reset to first page
             }}
           >
@@ -57,9 +67,7 @@ export default function WinnersPage() {
 
       {/* Empty state */}
       {winnersQ.data?.total === 0 && !winnersQ.isFetching && (
-        <p className="text-center italic text-gray-500">
-          No winners yet—run a race!
-        </p>
+        <p className="text-center italic text-gray-500">No winners yet—run a race!</p>
       )}
 
       {/* Winners table */}
@@ -76,9 +84,7 @@ export default function WinnersPage() {
           <tbody>
             {winnersQ.data?.data.map((w, idx) => (
               <tr key={w.id} className="border-t">
-                <td className="px-2 text-center">
-                  {(page - 1) * LIMIT + idx + 1}
-                </td>
+                <td className="px-2 text-center">{(page - 1) * LIMIT + idx + 1}</td>
                 <td className="flex items-center gap-2">
                   <div
                     className="h-4 w-6 rounded"
@@ -95,17 +101,7 @@ export default function WinnersPage() {
       )}
 
       {/* Pagination */}
-      {winnersQ.data && (
-        <Pagination
-          total={winnersQ.data.total}
-          limit={LIMIT}
-          source="winners"
-        />
-      )}
+      {winnersQ.data && <Pagination total={winnersQ.data.total} limit={LIMIT} source="winners" />}
     </section>
   );
 }
-
-
-
-  

@@ -1,13 +1,7 @@
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { useGetCarsQuery } from '../api/garageApi';
-import {
-  startRace,
-  resetRace,
-  finishRace,
-  setTotalCars,
-  setGaragePage,
-} from '../app/uiSlice';
+import { startRace, resetRace, finishRace, setTotalCars, setGaragePage } from '../app/uiSlice';
 import type { Car } from '../types/car';
 
 import CarForm from '../components/garage/CarForm';
@@ -18,46 +12,46 @@ import RaceTrack, { RaceTrackHandles } from '../components/garage/RaceTrack';
 const PAGE_LIMIT = 10;
 
 export default function GaragePage() {
-  const dispatch  = useAppDispatch();
-  const page      = useAppSelector((s) => s.ui.garagePage);
+  const dispatch = useAppDispatch();
+  const page = useAppSelector((s) => s.ui.garagePage);
   const prevPage = useRef(page);
   const { isRacing, singleCarId, banner, trackVisible } = useAppSelector((s) => s.ui);
   const anyRunning = isRacing || singleCarId !== null;
-  const fullRace   = isRacing;
-  const singleRun  = singleCarId !== null;
+  const canReset = !isRacing && singleCarId === null && trackVisible;
 
   const { data, isFetching, error } = useGetCarsQuery({
     page,
     limit: PAGE_LIMIT,
   });
- // keep the "grid" cars until the user clicks Reset
- const raceCarsRef = useRef<Car[] | null>(null);
-
- // take a snapshot when a full race starts
- useEffect(() => {
-   if (isRacing && data?.data) {             // startRace() just dispatched
-     raceCarsRef.current = data.data;        // freeze current page
-   }
- }, [isRacing, data?.data]);
-
-
-useEffect(() => {
-     if (prevPage.current !== page && !isRacing && singleCarId === null) {
-       raceCarsRef.current = null;          // forget the snapshot
-       dispatch(resetRace());               // clears trackVisible
-     }
-     prevPage.current = page;
-    }, [page, isRacing, singleCarId, dispatch]);
-
- // clear the snapshot on Reset
- const handleReset = () => {
-   trackRef.current?.stopAll();
-   trackRef.current?.resetAll();
-   raceCarsRef.current = null;               // allow fresh page later
-   dispatch(resetRace());
- };
-
+  // keep the "grid" cars until the user clicks Reset
+  const raceCarsRef = useRef<Car[] | null>(null);
   const trackRef = useRef<RaceTrackHandles>(null);
+
+  // take a snapshot when a full race starts
+  useEffect(() => {
+    if (isRacing && data?.data) {
+      // startRace() just dispatched
+      raceCarsRef.current = data.data; // freeze current page
+    }
+  }, [isRacing, data?.data]);
+
+  useEffect(() => {
+    if (prevPage.current !== page && !isRacing && singleCarId === null) {
+      raceCarsRef.current = null; // forget the snapshot
+      dispatch(resetRace()); // clears trackVisible
+    }
+    prevPage.current = page;
+  }, [page, isRacing, singleCarId, dispatch]);
+
+  // clear the snapshot on Reset
+  const handleReset = () => {
+    trackRef.current?.stopAll();
+    trackRef.current?.resetAll();
+    raceCarsRef.current = null; // allow fresh page later
+    dispatch(resetRace());
+  };
+
+  
 
   /* ─── mount / unmount ─────────────────────────────────────────── */
   useEffect(() => {
@@ -66,9 +60,9 @@ useEffect(() => {
 
     /* cancel CSS animations if we navigate away from Garage */
     return () => {
-        trackRef.current?.stopAll();   // keeps parked lanes from animating
-       dispatch(resetRace());         // ← NEW: clear isRacing + trackVisible
-      };
+      trackRef.current?.stopAll(); // keeps parked lanes from animating
+      dispatch(resetRace()); // ← NEW: clear isRacing + trackVisible
+    };
   }, [dispatch]);
 
   /* ─── keep totalCars in Redux ─────────────────────────────────── */
@@ -95,22 +89,20 @@ useEffect(() => {
 
   /* ─── memoised car rows ───────────────────────────────────────── */
   const rows = useMemo(
-    () => data?.data.map((c) => <CarCard key={c.id} car={c} />) ?? [],
-    [data?.data],
+    () =>
+      data?.data.map((c) => (
+        <CarCard key={c.id} car={c} pauseAnim={(id) => trackRef.current?.stopLane(id)} />
+      )) ?? [],
+    [data?.data, trackRef],
   );
+  const handleRaceEnd = useCallback((msg: string) => dispatch(finishRace(msg)), [dispatch]);
 
   /* ─── render ──────────────────────────────────────────────────── */
   return (
     <section className="space-y-6">
-      {banner && (
-        <div className="rounded bg-green-100 text-green-800 px-3 py-2">
-          {banner}
-        </div>
-      )}
+      {banner && <div className="rounded bg-green-100 text-green-800 px-3 py-2">{banner}</div>}
 
-      <h1 className="text-2xl font-semibold text-gray-900">
-        Garage&nbsp;({data?.total ?? 0})
-      </h1>
+      <h1 className="text-2xl font-semibold text-gray-900">Garage&nbsp;({data?.total ?? 0})</h1>
 
       <CarForm />
 
@@ -135,7 +127,7 @@ useEffect(() => {
 
       {/* race controls */}
       <div className="flex gap-4">
-        <button
+        <button type="button"
           className="btn btn-success"
           disabled={anyRunning || trackVisible || (data?.data?.length ?? 0) === 0}
           onClick={() => dispatch(startRace())}
@@ -143,11 +135,7 @@ useEffect(() => {
           Race
         </button>
 
-        <button
-          className="btn btn-outline"
-          disabled={fullRace || !singleRun} 
-          onClick={handleReset}
-        >
+        <button type="button" className="btn btn-outline" disabled={!canReset} onClick={handleReset}>
           Reset
         </button>
       </div>
@@ -156,26 +144,19 @@ useEffect(() => {
       {(trackVisible || singleCarId !== null) && (
         <RaceTrack
           ref={trackRef}
-         cars={trackVisible                       // full-race grid
+          cars={
+            trackVisible // full-race grid
               ? raceCarsRef.current ?? data?.data ?? []
-              : data?.data.filter((c) => c.id === singleCarId) ?? []}
-            active={isRacing || singleCarId !== null}
-          onRaceEnd={(msg) => dispatch(finishRace(msg))}
+              : data?.data.filter((c) => c.id === singleCarId) ?? []
+          }
+          active={isRacing || singleCarId !== null}
+          onRaceEnd={handleRaceEnd}
         />
       )}
 
       {data && (
-        <Pagination
-          total={data.total}
-          limit={PAGE_LIMIT}
-          source="garage"
-          disabled={anyRunning}
-        />
+        <Pagination total={data.total} limit={PAGE_LIMIT} source="garage" disabled={anyRunning} />
       )}
     </section>
   );
 }
-
-
-
-  

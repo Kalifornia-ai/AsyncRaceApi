@@ -13,32 +13,31 @@ import { selectCar as selectCarAction, saveDraft } from '../../app/uiSlice';
 import { Car } from '../../types/car';
 
 export default function CarForm() {
-  const dispatch          = useAppDispatch();
-  const selectedId        = useAppSelector((s) => s.ui.selectedCarId);
-  const draft             = useAppSelector((s) => s.ui.draftCar);
-  const { isRacing, singleCarId} = useAppSelector((s) => s.ui);
-  const anyRunning = isRacing || singleCarId !== null; 
+  const dispatch = useAppDispatch();
+  const selectedId = useAppSelector((s) => s.ui.selectedCarId);
+  const draft = useAppSelector((s) => s.ui.draftCar);
+  const { isRacing, singleCarId } = useAppSelector((s) => s.ui);
+  const anyRunning = isRacing || singleCarId !== null;
 
   /* current car list (to pre-fill form) */
-  const { data: resp, refetch: refetchCars } =
-    useGetCarsQuery({ page: 1, limit: 1000 });
-  const cars: Car[]    = resp?.data ?? [];
-  const selectedCar    = cars.find((c) => c.id === selectedId);
+  const { data: resp, refetch: refetchCars } = useGetCarsQuery({ page: 1, limit: 1000 });
+  const cars: Car[] = resp?.data ?? [];
+  const selectedCar = cars.find((c) => c.id === selectedId);
 
   /* RTK-Query mutations / lazy query */
-  const [createCar,  { isLoading: isCreating }]   = useCreateCarMutation();
-  const [updateCar,  { isLoading: isUpdating }]   = useUpdateCarMutation();
-  const [deleteCar]                                = useDeleteCarMutation();
-  const [deleteWinner]                             = useDeleteWinnerMutation();
-  const [fetchCars]                                = useLazyGetCarsQuery();
+  const [createCar, { isLoading: isCreating }] = useCreateCarMutation();
+  const [updateCar, { isLoading: isUpdating }] = useUpdateCarMutation();
+  const [deleteCar] = useDeleteCarMutation();
+  const [deleteWinner] = useDeleteWinnerMutation();
+  const [fetchCars] = useLazyGetCarsQuery();
 
   /* form fields */
-  const [name,  setName]  = useState(draft?.name  ?? '');
+  const [name, setName] = useState(draft?.name ?? '');
   const [color, setColor] = useState(draft?.color ?? '#ff0000');
 
   /* spinners */
-  const [isGenerating,   setIsGenerating]   = useState(false);
-  const [isDeletingMany, setDeletingMany]   = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isDeletingMany, setDeletingMany] = useState(false);
 
   /* ───── sync selection → form ─────────────────────────────────── */
   useEffect(() => {
@@ -67,19 +66,19 @@ export default function CarForm() {
   };
 
   const randomColor = () =>
-    `#${Math.floor(Math.random() * 0xffffff).toString(16).padStart(6, '0')}`;
+    `#${Math.floor(Math.random() * 0xffffff)
+      .toString(16)
+      .padStart(6, '0')}`;
 
   /* ───── submit (create / update) ──────────────────────────────── */
   const handleSubmit: React.FormEventHandler = async (e) => {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed || trimmed.length > 20) return;   // length guard
+    if (!trimmed || trimmed.length > 20) return; // length guard
 
     try {
-      if (selectedId)
-        await updateCar({ id: selectedId, name: trimmed, color }).unwrap();
-      else
-        await createCar({ name: trimmed, color }).unwrap();
+      if (selectedId) await updateCar({ id: selectedId, name: trimmed, color }).unwrap();
+      else await createCar({ name: trimmed, color }).unwrap();
 
       resetForm();
       refetchCars();
@@ -90,15 +89,36 @@ export default function CarForm() {
   };
 
   /* ───── bulk generate 100 cars ────────────────────────────────── */
-  const BRANDS = ['Toyota','Ford','Honda','Tesla','BMW',
-                  'Audi','Nissan','Kia','Hyundai','Volvo'];
-  const MODELS = ['Supra','Mustang','Civic','Model S','X5',
-                  'A4','Leaf','Sportage','Ioniq','XC90'];
+  const BRANDS = [
+    'Toyota',
+    'Ford',
+    'Honda',
+    'Tesla',
+    'BMW',
+    'Audi',
+    'Nissan',
+    'Kia',
+    'Hyundai',
+    'Volvo',
+  ];
+  const MODELS = [
+    'Supra',
+    'Mustang',
+    'Civic',
+    'Model S',
+    'X5',
+    'A4',
+    'Leaf',
+    'Sportage',
+    'Ioniq',
+    'XC90',
+  ];
 
   const handleGenerate = async () => {
     if (!window.confirm('Generate 100 random cars?')) return;
     setIsGenerating(true);
-    let success = 0, fail = 0;
+    let success = 0,
+      fail = 0;
 
     for (let i = 0; i < 100; i++) {
       const name =
@@ -111,7 +131,7 @@ export default function CarForm() {
         console.error(`Generation ${i + 1} failed:`, err);
         fail++;
       }
-      await new Promise((r) => setTimeout(r, 100));   // throttle
+      await new Promise((r) => setTimeout(r, 100)); // throttle
     }
 
     alert(`Generation complete: ${success} succeeded, ${fail} failed out of 100.`);
@@ -130,10 +150,12 @@ export default function CarForm() {
 
       for (const id of ids) {
         await deleteCar(id).unwrap();
-        await deleteWinner(id).unwrap().catch((e) => {
-          if (e?.status !== 404) throw e;             // ignore “not a winner”
-        });
-        await new Promise((r) => setTimeout(r, 50));  // throttle
+        await deleteWinner(id)
+          .unwrap()
+          .catch((e) => {
+            if (e?.status !== 404) throw e; // ignore “not a winner”
+          });
+        await new Promise((r) => setTimeout(r, 50)); // throttle
       }
 
       alert(`Deleted ${ids.length} cars`);
@@ -169,18 +191,14 @@ export default function CarForm() {
         className="btn btn-primary"
         disabled={isCreating || isUpdating || !name.trim()}
       >
-        {isCreating || isUpdating
-          ? 'Saving…'
-          : selectedId
-          ? 'Update'
-          : 'Create'}
+        {isCreating || isUpdating ? 'Saving…' : selectedId ? 'Update' : 'Create'}
       </button>
 
       <button
         type="button"
         className="btn btn-secondary"
         onClick={handleGenerate}
-        disabled={isCreating || isGenerating || anyRunning }
+        disabled={isCreating || isGenerating || anyRunning}
       >
         {isGenerating ? 'Generating…' : 'Generate 100 Random Cars'}
       </button>
@@ -196,13 +214,3 @@ export default function CarForm() {
     </form>
   );
 }
-
-
-
-
-
-
-
-
-
-

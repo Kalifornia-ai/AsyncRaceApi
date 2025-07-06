@@ -5,14 +5,12 @@ interface Props {
   total: number;
   limit: number;
   source: 'garage' | 'winners';
-  disabled?: boolean;  
+  disabled?: boolean;
 }
 
-export default function Pagination({ total, limit, source, disabled = false, }: Props) {
+export default function Pagination({ total, limit, source, disabled = false }: Props) {
   /* current page from Redux */
-  const page = useAppSelector((s) =>
-    source === 'garage' ? s.ui.garagePage : s.ui.winnersPage
-  );
+  const page = useAppSelector((s) => (source === 'garage' ? s.ui.garagePage : s.ui.winnersPage));
 
   const dispatch = useAppDispatch();
 
@@ -26,11 +24,11 @@ export default function Pagination({ total, limit, source, disabled = false, }: 
   const go = (p: number) => {
     const target = Math.min(Math.max(p, 1), pages);
     if (source === 'garage') dispatch(setGaragePage(target));
-    else                     dispatch(setWinnersPage(target));
+    else dispatch(setWinnersPage(target));
   };
 
   return (
-    <div className="join mt-4">
+    <div className="join mt-4 ">
       <button
         type="button"
         className="btn join-item"
@@ -40,7 +38,7 @@ export default function Pagination({ total, limit, source, disabled = false, }: 
         «
       </button>
 
-      <span className="btn join-item pointer-events-none">
+      <span className="btn join-item pointer-events-none text-gray-800">
         {page} / {pages}
       </span>
 
@@ -55,5 +53,3 @@ export default function Pagination({ total, limit, source, disabled = false, }: 
     </div>
   );
 }
-
-
