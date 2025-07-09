@@ -1,69 +1,144 @@
-# React + TypeScript + Vite
+# 🚗 Async Race
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An SPA to build a virtual garage, race radio‑controlled cars and track winners.  Created for the **EPAM “Async Race” task**.
 
-Currently, two official plugins are available:
+| Live demo                                                  | Score             |
+| ---------------------------------------------------------- | ----------------- |
+| https://github.com/Kalifornia-ai/AsyncRaceApi | **400 / 400 pts** |
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+All requirements implemented — see the fully ticked checklist below.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 📋 Checklist (all done)
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 🚀 UI Deployment
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+|  Status  |  Pts  |  Item                                                          |
+| -------- | ----- | -------------------------------------------------------------- |
+| ✅        |  —    | Deployed to GitHub Pages / Netlify / Vercel / Cloudflare Pages |
+| ✅        |  —    | Commits follow the guideline                                   |
+| ✅        |  —    | Checklist included in README and kept up‑to‑date               |
+| ✅        |  —    | Score & deploy link added to README                            |
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Basic Structure (80 pts)
+
+|  Status  |  Pts  |  Requirement                                                          |
+| -------- | ----- | --------------------------------------------------------------------- |
+| ✅        | 10    | Two views: **Garage** & **Winners**                                   |
+| ✅        | 30    | Garage view shows: header, create/edit panel, race panel, garage list |
+| ✅        | 10    | Winners view shows: header, winners table, pagination                 |
+| ✅        | 30    | Persistent state when switching views (page #, inputs, etc.)          |
+
+### Garage View (90 pts)
+
+|  Status  |  Pts  |  Requirement                                             |
+| -------- | ----- | -------------------------------------------------------- |
+| ✅        | 20    | CRUD for cars (name + color). Deletes cascade to Winners |
+| ✅        | 10    | RGB color picker reflected on car sprite                 |
+| ✅        | 20    | Random 100 cars generator                                |
+| ✅        | 10    | Update / Delete buttons near each car                    |
+| ✅        | 10    | Pagination – 7 cars / page                               |
+| ✅        | 10    | **Extra** Empty‑garage UX & auto‑rewind page             |
+| ✅        | 20    | **Extra** Rewind page on last‑car delete                 |
+
+### 🏆 Winners View (50 pts)
+
+|  Status  |  Pts  |  Requirement                                     |
+| -------- | ----- | ------------------------------------------------ |
+| ✅        | 15    | Display winners after races                      |
+| ✅        | 10    | Pagination – 10 winners / page                   |
+| ✅        | 15    | Table columns: № / car / name / wins / best time |
+| ✅        | 10    | Sorting by wins & best time (asc/desc)           |
+
+### 🚗 Race (170 pts)
+
+|  Status  |  Pts  |  Requirement                                                    |
+| -------- | ----- | --------------------------------------------------------------- |
+| ✅        | 20    | Start‑engine animation with velocity request; stop on 500 error |
+| ✅        | 20    | Stop‑engine animation returns car to start                      |
+| ✅        | 30    | Responsive animation works ≥ 500 px                             |
+| ✅        | 10    | “Start Race” starts all cars on current page                    |
+| ✅        | 15    | “Reset Race” returns all cars to start                          |
+| ✅        | 5     | Winner banner with car name                                     |
+| ✅        | 20    | Correct button states (disabled while racing etc.)              |
+| ✅        | 50    | Robust actions during race (edit/delete/add, switch page/view)  |
+
+### 🎨 Tooling (10 pts)
+
+|  Status  |  Pts  |  Requirement                                  |
+| -------- | ----- | --------------------------------------------- |
+| ✅        | 5     | Prettier with `format` & `ci:format` scripts  |
+| ✅        | 5     | ESLint (Airbnb, strict TS) with `lint` script |
+
+### 🌟 Overall Code Quality (up to 100 pts – reviewer)
+
+
+---
+
+## 🔧 Getting Started
+
+```bash
+# clone & install
+$ git clone https://github.com/Kalifornia-ai/AsyncRaceApi
+$ cd async‑race && pnpm install
+
+# start backend mock (in another terminal)
+$ git clone https://github.com/mikhama/async‑race‑api.git
+$ cd async‑race‑api && npm i && npm start
+
+# run Vite dev server
+$ npm dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Scripts
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+* `dev` – Vite + HMR
+* `build` – production build
+* `preview` – preview dist
+* `format` / `ci:format` – Prettier
+* `lint` – ESLint (Airbnb)
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+---
+
+## 🗂 Structure
+
 ```
+src/
+├─ api/          # RTK Query slices
+├─ app/          # Redux store & UI slice
+├─ components/   # UI building blocks
+├─ pages/        # Garage & Winners views
+├─ types/        # global TS types
+├─ utils/        # pure helpers
+└─ main.tsx      # React root
+```
+
+---
+
+## ⚙️ Stack
+
+* React 18 + TypeScript strict
+* Vite
+* Redux Toolkit (+ RTK Query)
+* Tailwind CSS
+* ESLint (Airbnb) + Prettier
+* Web Animations API for car motion
+
+---
+
+## 📝 Commit convention
+
+Conventional Commits:
+
+```
+<type>: <subject>
+```
+
+Examples: `feat: add random‑car generator`, `fix: handle 500 engine error`.
+
+---
+
+## 📄 License
+
+MIT © 2025 

@@ -9,7 +9,7 @@ import CarCard from '../components/garage/CarCard';
 import Pagination from '../components/garage/Pagination';
 import RaceTrack, { RaceTrackHandles } from '../components/garage/RaceTrack';
 
-const PAGE_LIMIT = 10;
+const PAGE_LIMIT = 7;
 
 export default function GaragePage() {
   const dispatch = useAppDispatch();
