@@ -33,10 +33,7 @@ export default function WinnersPage() {
 
   /* Map carId → Car (typed) */
   const carById = useMemo<Record<number, Car>>(
-    () =>
-      Object.fromEntries(
-        (carsData?.data ?? []).map((c) => [c.id, c]),
-      ) as Record<number, Car>,
+    () => Object.fromEntries((carsData?.data ?? []).map((c) => [c.id, c])) as Record<number, Car>,
     [carsData],
   );
 
@@ -49,11 +46,7 @@ export default function WinnersPage() {
   /* -------- Early error guard -------- */
   if (winnersError) {
     let msg = 'network';
-    if (
-      typeof winnersError === 'object' &&
-      winnersError !== null &&
-      'status' in winnersError
-    ) {
+    if (typeof winnersError === 'object' && winnersError !== null && 'status' in winnersError) {
       const e = winnersError as ApiErrorShape;
       msg = `${e.status} – ${JSON.stringify(e.data ?? e.message ?? '')}`;
     } else if (winnersError instanceof Error) {
@@ -77,7 +70,7 @@ export default function WinnersPage() {
             type="button"
             className="btn btn-sm btn-outline cursor-pointer"
             onClick={() => {
-              dispatch(setSort(col));      // toggles order if same col
+              dispatch(setSort(col)); // toggles order if same col
               dispatch(setWinnersPage(1)); // reset to first page
             }}
           >
@@ -92,9 +85,7 @@ export default function WinnersPage() {
 
       {/* Empty */}
       {winnersData?.total === 0 && !winnersFetching && (
-        <p className="text-center italic text-gray-500">
-          No winners yet—run a race!
-        </p>
+        <p className="text-center italic text-gray-500">No winners yet—run a race!</p>
       )}
 
       {/* Winners table */}
@@ -111,9 +102,7 @@ export default function WinnersPage() {
           <tbody>
             {winnersData?.data.map((w, idx) => (
               <tr key={w.id} className="border-t">
-                <td className="px-2 text-center">
-                  {(page - 1) * LIMIT + idx + 1}
-                </td>
+                <td className="px-2 text-center">{(page - 1) * LIMIT + idx + 1}</td>
                 <td className="flex items-center gap-2">
                   <div
                     className="h-4 w-6 rounded"
@@ -124,9 +113,7 @@ export default function WinnersPage() {
                   {carById[w.id]?.name ?? `Car ${w.id}`}
                 </td>
                 <td className="text-center">{w.wins}</td>
-                <td className="text-center">
-                  {(w.time / 1000).toFixed(2)}
-                </td>
+                <td className="text-center">{(w.time / 1000).toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -134,15 +121,7 @@ export default function WinnersPage() {
       )}
 
       {/* Pagination */}
-      {winnersData && (
-        <Pagination
-          total={winnersData.total}
-          limit={LIMIT}
-          source="winners"
-        />
-      )}
+      {winnersData && <Pagination total={winnersData.total} limit={LIMIT} source="winners" />}
     </section>
   );
 }
-
-

@@ -1,17 +1,11 @@
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { useAppDispatch, useAppSelector } from '../app/hooks';
 import { useGetCarsQuery } from '../api/garageApi';
-import {
-  startRace,
-  resetRace,
-  finishRace,
-  setTotalCars,
-  setGaragePage,
-} from '../app/uiSlice';
+import { startRace, resetRace, finishRace, setTotalCars, setGaragePage } from '../app/uiSlice';
 import type { Car } from '../types/car';
 
-import CarForm   from '../components/garage/CarForm';
-import CarCard   from '../components/garage/CarCard';
+import CarForm from '../components/garage/CarForm';
+import CarCard from '../components/garage/CarCard';
 import Pagination from '../components/garage/Pagination';
 import RaceTrack, { RaceTrackHandles } from '../components/garage/RaceTrack';
 
@@ -19,26 +13,23 @@ const PAGE_LIMIT = 10;
 
 export default function GaragePage() {
   const dispatch = useAppDispatch();
-  const page     = useAppSelector((s) => s.ui.garagePage);
+  const page = useAppSelector((s) => s.ui.garagePage);
   const { isRacing, singleCarId, banner, trackVisible } = useAppSelector((s) => s.ui);
   const anyRunning = isRacing || singleCarId !== null;
 
   /* --- backend data -------------------------------------------------- */
   const { data, isFetching, error } = useGetCarsQuery({
-      page,
-      limit: PAGE_LIMIT,
-    });
+    page,
+    limit: PAGE_LIMIT,
+  });
 
   /* --- refs ---------------------------------------------------------- */
   const raceCarsRef = useRef<Car[] | null>(null);
-  const trackRef    = useRef<RaceTrackHandles>(null);
-  const prevPage    = useRef(page);
+  const trackRef = useRef<RaceTrackHandles>(null);
+  const prevPage = useRef(page);
 
   /* --- memoised values ---------------------------------------------- */
-  const carsData = useMemo<Car[]>(
-    () => (data?.data ?? [] as Car[]),      
-    [data],
-  );
+  const carsData = useMemo<Car[]>(() => data?.data ?? ([] as Car[]), [data]);
 
   const rows = useMemo<JSX.Element[]>(
     () =>
@@ -106,13 +97,9 @@ export default function GaragePage() {
   /* --- render -------------------------------------------------------- */
   return (
     <section className="space-y-6">
-      {banner && (
-        <div className="rounded bg-green-100 text-green-800 px-3 py-2">{banner}</div>
-      )}
+      {banner && <div className="rounded bg-green-100 text-green-800 px-3 py-2">{banner}</div>}
 
-      <h1 className="text-2xl font-semibold text-gray-900">
-        Garage ({data?.total ?? 0})
-      </h1>
+      <h1 className="text-2xl font-semibold text-gray-900">Garage ({data?.total ?? 0})</h1>
 
       <CarForm />
 
@@ -147,7 +134,7 @@ export default function GaragePage() {
         <button
           type="button"
           className="btn btn-outline"
-          disabled={!( !isRacing && singleCarId === null && trackVisible )}
+          disabled={!(!isRacing && singleCarId === null && trackVisible)}
           onClick={handleReset}
         >
           Reset
@@ -168,16 +155,8 @@ export default function GaragePage() {
       )}
 
       {data && (
-        <Pagination
-          total={data.total}
-          limit={PAGE_LIMIT}
-          source="garage"
-          disabled={anyRunning}
-        />
+        <Pagination total={data.total} limit={PAGE_LIMIT} source="garage" disabled={anyRunning} />
       )}
     </section>
   );
 }
-
-
-

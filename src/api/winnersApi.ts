@@ -8,16 +8,14 @@ import type { FetchBaseQueryMeta } from '@reduxjs/toolkit/query';
 export interface Winner {
   id: number;
   wins: number;
-  time: number;          // ms
+  time: number; // ms
 }
 
 /* ------------------------------------------------------------------ */
 /*  Env                                                                */
 /* ------------------------------------------------------------------ */
 const API_URL: string =
-  typeof import.meta.env.VITE_API === 'string'
-    ? import.meta.env.VITE_API
-    : 'http://localhost:3000';
+  typeof import.meta.env.VITE_API === 'string' ? import.meta.env.VITE_API : 'http://localhost:3000';
 
 /* ------------------------------------------------------------------ */
 /*  API slice                                                          */

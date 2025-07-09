@@ -6,9 +6,7 @@ import type { Car } from '../types/car';
 /* ------------------------------------------------------------------ */
 // `import.meta.env.*` is typed as `any` in Vite projects, so cast it.
 const API_URL: string =
-  typeof import.meta.env.VITE_API === 'string'
-    ? import.meta.env.VITE_API
-    : 'http://localhost:3000';
+  typeof import.meta.env.VITE_API === 'string' ? import.meta.env.VITE_API : 'http://localhost:3000';
 
 /* ------------------------------------------------------------------ */
 /*  API slice                                                          */
@@ -20,18 +18,13 @@ export const garageApi = createApi({
 
   endpoints: (builder) => ({
     /* -------------------------- GET (paged) ------------------------- */
-    getCars: builder.query<
-      { data: Car[]; total: number },
-      { page: number; limit: number }
-    >({
+    getCars: builder.query<{ data: Car[]; total: number }, { page: number; limit: number }>({
       query: ({ page, limit }) => ({
         url: '/garage',
         params: { _page: page, _limit: limit },
       }),
       transformResponse: (response: Car[], meta) => {
-        const total = Number(
-          meta?.response?.headers?.get('X-Total-Count') ?? 0,
-        );
+        const total = Number(meta?.response?.headers?.get('X-Total-Count') ?? 0);
         return { data: response, total };
       },
       providesTags: (result) =>
@@ -50,10 +43,7 @@ export const garageApi = createApi({
     }),
 
     /* --------------------------- UPDATE ----------------------------- */
-    updateCar: builder.mutation<
-      Car,
-      Partial<Car> & Pick<Car, 'id'>
-    >({
+    updateCar: builder.mutation<Car, Partial<Car> & Pick<Car, 'id'>>({
       query: ({ id, ...patch }) => ({
         url: `/garage/${id}`,
         method: 'PATCH',
@@ -75,10 +65,7 @@ export const garageApi = createApi({
     }),
 
     /* ----------------------- ENGINE CONTROLS ----------------------- */
-    startEngine: builder.mutation<
-      { velocity: number; distance: number; id: number },
-      number
-    >({
+    startEngine: builder.mutation<{ velocity: number; distance: number; id: number }, number>({
       query: (id) => ({
         url: `/engine?id=${id}&status=started`,
         method: 'PATCH',
@@ -114,6 +101,3 @@ export const {
   useStopEngineMutation,
   useDriveEngineMutation,
 } = garageApi;
-
-
-

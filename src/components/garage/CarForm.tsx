@@ -59,31 +59,31 @@ export default function CarForm() {
   const dispatch = useAppDispatch();
 
   /* -------- global slice state -------- */
-  const selectedId           = useAppSelector((s) => s.ui.selectedCarId);
-  const draft                = useAppSelector((s) => s.ui.draftCar);
+  const selectedId = useAppSelector((s) => s.ui.selectedCarId);
+  const draft = useAppSelector((s) => s.ui.draftCar);
   const { isRacing, singleCarId } = useAppSelector((s) => s.ui);
-  const anyRunning           = isRacing || singleCarId !== null;
+  const anyRunning = isRacing || singleCarId !== null;
 
   /* -------- backend data -------- */
   const getCarsQ = useGetCarsQuery({ page: 1, limit: PAGE_LIMIT });
-  const cars: Car[]          = getCarsQ.data?.data ?? [];
-  const refetchCars          = getCarsQ.refetch;
-  const selectedCar          = cars.find((c) => c.id === selectedId) ?? null;
+  const cars: Car[] = getCarsQ.data?.data ?? [];
+  const refetchCars = getCarsQ.refetch;
+  const selectedCar = cars.find((c) => c.id === selectedId) ?? null;
 
   /* -------- RTK Query hooks -------- */
-  const [createCar, createState]   = useCreateCarMutation();
-  const [updateCar, updateState]   = useUpdateCarMutation();
-  const [deleteCar]               = useDeleteCarMutation();
-  const [deleteWinner]            = useDeleteWinnerMutation();
-  const [fetchCars]               = useLazyGetCarsQuery();
+  const [createCar, createState] = useCreateCarMutation();
+  const [updateCar, updateState] = useUpdateCarMutation();
+  const [deleteCar] = useDeleteCarMutation();
+  const [deleteWinner] = useDeleteWinnerMutation();
+  const [fetchCars] = useLazyGetCarsQuery();
 
   const isCreating = createState.isLoading;
   const isUpdating = updateState.isLoading;
 
   /* -------- local form state -------- */
-  const [name,  setName]  = useState(draft?.name  ?? '');
+  const [name, setName] = useState(draft?.name ?? '');
   const [color, setColor] = useState(draft?.color ?? '#ff0000');
-  const [isGenerating,  setIsGenerating]  = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const [isDeletingMany, setIsDeletingMany] = useState(false);
 
   /* -------- sync selection → form -------- */
@@ -159,7 +159,7 @@ export default function CarForm() {
         });
     });
 
-    const results      = await Promise.allSettled(genTasks);
+    const results = await Promise.allSettled(genTasks);
     const successCount = results.filter(
       (r): r is PromiseFulfilledResult<boolean> => r.status === 'fulfilled' && r.value,
     ).length;
@@ -178,7 +178,7 @@ export default function CarForm() {
 
     try {
       const dataResp = await fetchCars({ page: 1, limit: PAGE_LIMIT }).unwrap();
-      const ids      = dataResp.data.slice(0, toDelete).map((c) => c.id);
+      const ids = dataResp.data.slice(0, toDelete).map((c) => c.id);
 
       await Promise.all(
         ids.map(async (id) => {
@@ -248,4 +248,3 @@ export default function CarForm() {
     </form>
   );
 }
-
