@@ -133,7 +133,7 @@ import {
               try {
                 const raw = await startEngine(car.id).unwrap();
                 if (!isStartRes(raw)) throw new Error();
-                velocity = Math.max(raw.velocity / DEV_SLOWDOWN, 80);
+                velocity = Math.max(raw.velocity, 80) / DEV_SLOWDOWN;
               } catch {
                 return { id: car.id, time: Infinity };
               }
