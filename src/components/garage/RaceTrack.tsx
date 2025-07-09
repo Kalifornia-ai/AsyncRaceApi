@@ -7,7 +7,6 @@ import {
     useRef,
   } from 'react';
   import { Car } from '../../types/car';
-  
   import {
     useStartEngineMutation,
     useStopEngineMutation,
@@ -20,16 +19,17 @@ import {
   import { markCarFailed, stopSingleCar } from '../../app/uiSlice';
   import { useAppSelector, useAppDispatch } from '../../app/hooks';
   
-  /* ───────── Helpers ───────── */
-  const wait = (ms: number) =>
-    new Promise<void>((r) => {
-      setTimeout(r, ms);
-    });
-  
+  /* ————— Helpers ————— */
+  const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
   const DEV_SLOWDOWN = import.meta.env.DEV ? 1 : 4;
-  const API_URL = import.meta.env.VITE_API ?? ''; // injected at build time
   
-  /* ───────── Types ───────── */
+  /** Resolve the API host exactly like RTK-Query slices do */
+  const API_BASE =
+    localStorage.getItem('apiBase') ??
+    import.meta.env.VITE_API ??
+    'http://localhost:3000';
+  
+  /* ————— Types ————— */
   export interface RaceTrackHandles {
     stopAll(): void;
     resetAll(): void;
@@ -42,21 +42,16 @@ import {
     active: boolean;
   }
   
-  interface WinnerRow {
-    wins: number;
-    time: number;
-  }
-  
-  interface StartEngineRes {
+  interface StartRes {
     velocity: number;
     distance: number;
     id: number;
   }
-  const isStartRes = (v: unknown): v is StartEngineRes =>
+  const isStartRes = (v: unknown): v is StartRes =>
     typeof v === 'object' &&
     v !== null &&
     'velocity' in v &&
-    typeof (v as Record<string, unknown>).velocity === 'number';
+    typeof (v as any).velocity === 'number';
   
   interface DriveRes {
     success: boolean;
@@ -83,27 +78,27 @@ import {
         [cars, singleId],
       );
   
-      /* ----- RTK Query hooks ----- */
-      const [startEngine]   = useStartEngineMutation();
-      const [stopEngine]    = useStopEngineMutation();
-      const [drive]         = useDriveEngineMutation();
-      const [createWinner]  = useCreateWinnerMutation();
-      const [updateWinner]  = useUpdateWinnerMutation();
+      /* RTK-Query */
+      const [startEngine]  = useStartEngineMutation();
+      const [stopEngine]   = useStopEngineMutation();
+      const [drive]        = useDriveEngineMutation();
+      const [createWinner] = useCreateWinnerMutation();
+      const [updateWinner] = useUpdateWinnerMutation();
   
-      /* ----- Imperative handle ----- */
+      /* Imperative API for parent */
       useImperativeHandle(
         ref,
         () => ({
           stopAll() {
             Object.values(lanesRef.current).forEach((el) =>
-              el?.getAnimations().forEach((anim) => anim.cancel()),
+              el?.getAnimations().forEach((a) => a.cancel()),
             );
-            cars.forEach((c) => void stopEngine(c.id).unwrap());
+            cars.forEach((c) => void stopEngine(c.id));
           },
           resetAll() {
             Object.values(lanesRef.current).forEach((el) => {
               if (!el) return;
-              el.getAnimations().forEach((anim) => anim.cancel());
+              el.getAnimations().forEach((a) => a.cancel());
               el.style.removeProperty('transform');
               el.style.removeProperty('outline');
             });
@@ -113,51 +108,50 @@ import {
             const el = lanesRef.current[id];
             if (!el) return;
             el.getAnimations().forEach(
-              (anim) => anim.playState === 'running' && anim.pause(),
+              (a) => a.playState === 'running' && a.pause(),
             );
             el.dataset.stopped = '1';
-            void stopEngine(id).unwrap();
+            void stopEngine(id);
           },
         }),
         [cars, stopEngine],
       );
   
-      /* ───────── Race effect ───────── */
+      /* ————— Core race effect ————— */
       useEffect(() => {
         if (!active || carsToAnimate.length === 0) return;
         isAlive.current = true;
   
         const controller = new AbortController();
-        const { signal } = controller;
         const snapshot   = { ...lanesRef.current };
   
         (async () => {
           const settled = await Promise.allSettled(
             carsToAnimate.map(async (car) => {
-              /* ---------- 1. Start engine ---------- */
+              /* 1. start engine */
               let velocity = 0;
               try {
-                const resUnknown = await startEngine(car.id).unwrap();
-                if (!isStartRes(resUnknown))
-                  throw new Error('Invalid start-engine payload');
-                velocity = Math.max(resUnknown.velocity / DEV_SLOWDOWN, 80);
+                const raw = await startEngine(car.id).unwrap();
+                if (!isStartRes(raw)) throw new Error();
+                velocity = Math.max(raw.velocity / DEV_SLOWDOWN, 80);
               } catch {
                 return { id: car.id, time: Infinity };
               }
   
-              if (signal.aborted) return { id: car.id, time: Infinity };
+              if (controller.signal.aborted)
+                return { id: car.id, time: Infinity };
   
-              /* ---------- 2. Prepare lane ---------- */
+              /* 2. animate */
               const laneEl = snapshot[car.id];
               if (!laneEl) return { id: car.id, time: Infinity };
   
-              const parentW =
-                laneEl.parentElement!.getBoundingClientRect().width;
-              const carW = laneEl.getBoundingClientRect().width;
-              const free = Math.max(parentW - carW, 0);
+              const parentW = laneEl.parentElement!.getBoundingClientRect()
+                .width;
+              const carW    = laneEl.getBoundingClientRect().width;
+              const free    = Math.max(parentW - carW, 0);
   
               const { transform } = getComputedStyle(laneEl);
-              const parts = transform.startsWith('matrix')
+              const parts  = transform.startsWith('matrix')
                 ? transform.slice(7, -1).split(',')
                 : [];
               const prevTx = parts.length === 6 ? parseFloat(parts[4]) : 0;
@@ -166,7 +160,7 @@ import {
               if (remaining === 0) return { id: car.id, time: Infinity };
   
               const durMs = (remaining / velocity) * 1000;
-              const anim = laneEl.animate(
+              const anim  = laneEl.animate(
                 [
                   { transform: `translateX(${prevTx}px)` },
                   { transform: `translateX(${free}px)` },
@@ -174,14 +168,13 @@ import {
                 { duration: durMs, easing: 'linear', fill: 'forwards' },
               );
   
-              /* ---------- 3. Drive check ---------- */
+              /* 3. drive check */
               try {
-                const drvUnknown = await drive(car.id).unwrap();
-                if (!isDriveRes(drvUnknown) || !drvUnknown.success)
-                  throw new Error();
+                const raw = await drive(car.id).unwrap();
+                if (!isDriveRes(raw) || !raw.success) throw new Error();
               } catch {
                 anim.pause();
-                laneEl.style.outline = '2px solid red';
+                laneEl.style.outline  = '2px solid red';
                 laneEl.dataset.stopped = '1';
                 dispatch(markCarFailed(car.id));
                 if (singleId != null) dispatch(stopSingleCar());
@@ -193,43 +186,39 @@ import {
             }),
           );
   
-          /* ---------- 4. Determine winner ---------- */
+          /* 4. winner */
           const results = settled.map<Result>((r) =>
             r.status === 'fulfilled' && r.value
               ? r.value
               : { id: -1, time: Infinity },
           );
           const winner = results.reduce(
-            (best, cur) => (cur.time < best.time ? cur : best),
+            (b, c) => (c.time < b.time ? c : b),
             { id: -1, time: Infinity },
           );
   
           if (!isAlive.current) return;
   
-          /* ---------- 5. No finisher ---------- */
           if (winner.id === -1) {
             onRaceEnd('No car finished the race 🏳');
             return;
           }
   
-          /* ---------- 6. Announce winner ---------- */
           const winCar = cars.find((c) => c.id === winner.id)!;
           onRaceEnd(
             `🏆 ${winCar.name} wins in ${(winner.time / 1000).toFixed(2)} s`,
           );
   
-          /* ---------- 7. Update-or-create winner ---------- */
+          /* 5. upsert winners row */
           try {
-            // try update first
             await updateWinner({
               id: winner.id,
-              wins: 1,          // server will increment if needed
+              wins: 1,
               time: winner.time,
             }).unwrap();
-          } catch (err) {
-            // only fallback to POST if server says "not found"
-            const status = (err as any)?.status ?? 0;
-            if (status === 404) {
+          } catch (e) {
+            const status = (e as any)?.status ?? 0;
+            if (status === 404 || status === 409 || status === 500) {
               await createWinner({
                 id: winner.id,
                 wins: 1,
@@ -237,21 +226,17 @@ import {
               }).unwrap();
             } else {
               /* eslint-disable no-console */
-              console.error(
-                'Failed to update/create winner',
-                err instanceof Error ? err : String(err),
-              );
+              console.error('Winner upsert failed', e);
             }
           }
         })();
   
-        /* ---------- cleanup ---------- */
         return () => {
           controller.abort();
           isAlive.current = false;
           Object.values(snapshot).forEach((el) => {
             if (!el || el.dataset.stopped === '1') return;
-            el.getAnimations().forEach((anim) => anim.cancel());
+            el.getAnimations().forEach((a) => a.cancel());
           });
         };
       }, [
@@ -268,7 +253,7 @@ import {
         cars,
       ]);
   
-      /* ───────── JSX ───────── */
+      /* ————— render ————— */
       return (
         <div className="space-y-3">
           {cars.map((car) => (
@@ -300,4 +285,5 @@ import {
   
   RaceTrack.displayName = 'RaceTrack';
   export default RaceTrack;
+  
   
