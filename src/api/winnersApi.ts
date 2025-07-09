@@ -1,20 +1,34 @@
 // src/api/winnersApi.ts
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import type { FetchBaseQueryMeta } from '@reduxjs/toolkit/query';
 
+/* ------------------------------------------------------------------ */
+/*  Types                                                              */
+/* ------------------------------------------------------------------ */
 export interface Winner {
   id: number;
   wins: number;
-  time: number; // ms
+  time: number;          // ms
 }
 
+/* ------------------------------------------------------------------ */
+/*  Env                                                                */
+/* ------------------------------------------------------------------ */
+const API_URL: string =
+  typeof import.meta.env.VITE_API === 'string'
+    ? import.meta.env.VITE_API
+    : 'http://localhost:3000';
+
+/* ------------------------------------------------------------------ */
+/*  API slice                                                          */
+/* ------------------------------------------------------------------ */
 export const winnersApi = createApi({
   reducerPath: 'winnersApi',
-  baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_API ?? 'http://localhost:3000',
-  }),
+  baseQuery: fetchBaseQuery({ baseUrl: API_URL }),
   tagTypes: ['Winners'],
+
   endpoints: (builder) => ({
-    /* ───────── GET /winners ───────── */
+    /* --------------------------- GET ------------------------------ */
     getWinners: builder.query<
       { data: Winner[]; total: number },
       { page: number; limit: number; sort: 'wins' | 'time'; order: 'asc' | 'desc' }
@@ -23,9 +37,9 @@ export const winnersApi = createApi({
         url: '/winners',
         params: { _page: page, _limit: limit, _sort: sort, _order: order },
       }),
-      transformResponse: (res: Winner[], meta) => ({
+      transformResponse: (res: Winner[], meta: FetchBaseQueryMeta | undefined) => ({
         data: res,
-        total: Number(meta?.response?.headers.get('X-Total-Count') ?? res.length),
+        total: Number(meta?.response?.headers?.get('X-Total-Count') ?? res.length),
       }),
       providesTags: (r) =>
         r
@@ -36,19 +50,18 @@ export const winnersApi = createApi({
           : [{ type: 'Winners', id: 'LIST' }],
     }),
 
-    /* ───────── POST /winners ───────── */
+    /* -------------------------- CREATE ---------------------------- */
     createWinner: builder.mutation<Winner, Winner>({
       query: (body) => ({ url: '/winners', method: 'POST', body }),
       invalidatesTags: [{ type: 'Winners', id: 'LIST' }],
     }),
 
-    /* ───────── PUT /winners/:id ────── */
-    // PATCH /winners/:id  body → { wins, time }
+    /* -------------------------- UPDATE ---------------------------- */
     updateWinner: builder.mutation<Winner, { id: number; wins: number; time: number }>({
       query: ({ id, ...body }) => ({
         url: `/winners/${id}`,
         method: 'PUT',
-        body, // { wins, time }
+        body,
       }),
       invalidatesTags: (_r, _e, { id }) => [
         { type: 'Winners', id },
@@ -56,7 +69,7 @@ export const winnersApi = createApi({
       ],
     }),
 
-    /* ───────── DELETE /winners/:id ─── */
+    /* -------------------------- DELETE ---------------------------- */
     deleteWinner: builder.mutation<void, number>({
       query: (id) => ({ url: `/winners/${id}`, method: 'DELETE' }),
       invalidatesTags: (_r, _e, id) => [
@@ -67,7 +80,9 @@ export const winnersApi = createApi({
   }),
 });
 
-/* RTK-Query hooks */
+/* ------------------------------------------------------------------ */
+/*  React hooks                                                        */
+/* ------------------------------------------------------------------ */
 export const {
   useGetWinnersQuery,
   useCreateWinnerMutation,

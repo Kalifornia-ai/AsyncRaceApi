@@ -42,6 +42,7 @@ module.exports = {
     'no-alert': 'off',
     // allow `void fn()` calls
     'no-void': 'off',
+    '@typescript-eslint/no-unsafe-assignment': 'error',
 
     // 1) allow RTK slice mutations
     'no-param-reassign': ['error', {
@@ -84,6 +85,7 @@ module.exports = {
       // TSX: no need for defaultProps
       files: ['*.tsx'],
       rules: { 'react/require-default-props': 'off' },
+
       
     },
 
@@ -108,6 +110,14 @@ module.exports = {
       files: ['src/app/uiSlice.ts','src/api/garageApi.ts','src/api/winnersApi.ts'],
       rules: { 'max-lines-per-function': 'off' },
     },
+
+    {
+      files: ['src/components/garage/**'],
+      rules: {
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+      },
+    },
+
   ],
 };
 

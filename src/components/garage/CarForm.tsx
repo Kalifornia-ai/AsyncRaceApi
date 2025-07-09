@@ -1,5 +1,4 @@
-/* src/components/garage/CarForm.tsx */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   useCreateCarMutation,
   useUpdateCarMutation,
@@ -10,36 +9,84 @@ import {
 import { useDeleteWinnerMutation } from '../../api/winnersApi';
 import { useAppDispatch, useAppSelector } from '../../app/hooks';
 import { selectCar as selectCarAction, saveDraft } from '../../app/uiSlice';
-import { Car } from '../../types/car';
+import type { Car } from '../../types/car';
 
+/* ───────────────────────────── Types & Guards ─────────────────────────── */
+interface ApiError {
+  status: number;
+  data: { message?: string; [k: string]: unknown };
+}
+
+function isApiError(e: unknown): e is ApiError {
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    'status' in e &&
+    'data' in e &&
+    typeof (e as Record<string, unknown>).status === 'number'
+  );
+}
+
+/* ───────────────────────── Config / Constants ─────────────────────────── */
+const PAGE_LIMIT = 1000;
+const BRANDS = [
+  'Toyota',
+  'Ford',
+  'Honda',
+  'Tesla',
+  'BMW',
+  'Audi',
+  'Nissan',
+  'Kia',
+  'Hyundai',
+  'Volvo',
+];
+const MODELS = [
+  'Supra',
+  'Mustang',
+  'Civic',
+  'Model S',
+  'X5',
+  'A4',
+  'Leaf',
+  'Sportage',
+  'Ioniq',
+  'XC90',
+];
+
+/* ─────────────────────────── Component ──────────────────────────────── */
 export default function CarForm() {
   const dispatch = useAppDispatch();
-  const selectedId = useAppSelector((s) => s.ui.selectedCarId);
-  const draft = useAppSelector((s) => s.ui.draftCar);
+
+  /* -------- global slice state -------- */
+  const selectedId           = useAppSelector((s) => s.ui.selectedCarId);
+  const draft                = useAppSelector((s) => s.ui.draftCar);
   const { isRacing, singleCarId } = useAppSelector((s) => s.ui);
-  const anyRunning = isRacing || singleCarId !== null;
+  const anyRunning           = isRacing || singleCarId !== null;
 
-  /* current car list (to pre-fill form) */
-  const { data: resp, refetch: refetchCars } = useGetCarsQuery({ page: 1, limit: 1000 });
-  const cars: Car[] = resp?.data ?? [];
-  const selectedCar = cars.find((c) => c.id === selectedId);
+  /* -------- backend data -------- */
+  const getCarsQ = useGetCarsQuery({ page: 1, limit: PAGE_LIMIT });
+  const cars: Car[]          = getCarsQ.data?.data ?? [];
+  const refetchCars          = getCarsQ.refetch;
+  const selectedCar          = cars.find((c) => c.id === selectedId) ?? null;
 
-  /* RTK-Query mutations / lazy query */
-  const [createCar, { isLoading: isCreating }] = useCreateCarMutation();
-  const [updateCar, { isLoading: isUpdating }] = useUpdateCarMutation();
-  const [deleteCar] = useDeleteCarMutation();
-  const [deleteWinner] = useDeleteWinnerMutation();
-  const [fetchCars] = useLazyGetCarsQuery();
+  /* -------- RTK Query hooks -------- */
+  const [createCar, createState]   = useCreateCarMutation();
+  const [updateCar, updateState]   = useUpdateCarMutation();
+  const [deleteCar]               = useDeleteCarMutation();
+  const [deleteWinner]            = useDeleteWinnerMutation();
+  const [fetchCars]               = useLazyGetCarsQuery();
 
-  /* form fields */
-  const [name, setName] = useState(draft?.name ?? '');
+  const isCreating = createState.isLoading;
+  const isUpdating = updateState.isLoading;
+
+  /* -------- local form state -------- */
+  const [name,  setName]  = useState(draft?.name  ?? '');
   const [color, setColor] = useState(draft?.color ?? '#ff0000');
+  const [isGenerating,  setIsGenerating]  = useState(false);
+  const [isDeletingMany, setIsDeletingMany] = useState(false);
 
-  /* spinners */
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isDeletingMany, setDeletingMany] = useState(false);
-
-  /* ───── sync selection → form ─────────────────────────────────── */
+  /* -------- sync selection → form -------- */
   useEffect(() => {
     if (selectedCar) {
       setName(selectedCar.name);
@@ -49,126 +96,112 @@ export default function CarForm() {
       setName('');
       setColor('#ff0000');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCar]);
+  }, [selectedCar, draft, dispatch]);
 
-  /* ───── persist draft on every keystroke ───────────────────────── */
+  /* -------- persist draft -------- */
   useEffect(() => {
     dispatch(saveDraft({ name, color }));
   }, [name, color, dispatch]);
 
-  /* ───── helpers ───────────────────────────────────────────────── */
-  const resetForm = () => {
+  /* -------- helpers -------- */
+  const resetForm = useCallback(() => {
     setName('');
     setColor('#ff0000');
     dispatch(saveDraft(undefined));
     dispatch(selectCarAction(null));
-  };
+  }, [dispatch]);
 
   const randomColor = () =>
     `#${Math.floor(Math.random() * 0xffffff)
       .toString(16)
       .padStart(6, '0')}`;
 
-  /* ───── submit (create / update) ──────────────────────────────── */
+  /* ───────────────────── Handlers ───────────────────── */
+
+  /** create / update single car */
   const handleSubmit: React.FormEventHandler = async (e) => {
     e.preventDefault();
     const trimmed = name.trim();
-    if (!trimmed || trimmed.length > 20) return; // length guard
+    if (!trimmed || trimmed.length > 20) return;
 
     try {
-      if (selectedId) await updateCar({ id: selectedId, name: trimmed, color }).unwrap();
-      else await createCar({ name: trimmed, color }).unwrap();
-
+      if (selectedId) {
+        await updateCar({ id: selectedId, name: trimmed, color }).unwrap();
+      } else {
+        await createCar({ name: trimmed, color }).unwrap();
+      }
       resetForm();
       refetchCars();
-    } catch (err) {
-      console.error('Failed to save car:', err);
-      alert('Failed to save car. Please try again.');
+    } catch (err: unknown) {
+      if (isApiError(err)) {
+        alert(err.data.message ?? 'Failed to save car. Please try again.');
+      } else {
+        alert(err instanceof Error ? err.message : 'Failed to save car. Please try again.');
+      }
     }
   };
 
-  /* ───── bulk generate 100 cars ────────────────────────────────── */
-  const BRANDS = [
-    'Toyota',
-    'Ford',
-    'Honda',
-    'Tesla',
-    'BMW',
-    'Audi',
-    'Nissan',
-    'Kia',
-    'Hyundai',
-    'Volvo',
-  ];
-  const MODELS = [
-    'Supra',
-    'Mustang',
-    'Civic',
-    'Model S',
-    'X5',
-    'A4',
-    'Leaf',
-    'Sportage',
-    'Ioniq',
-    'XC90',
-  ];
-
-  const handleGenerate = async () => {
+  /** bulk-generate 100 random cars */
+  const handleGenerate = useCallback(async () => {
     if (!window.confirm('Generate 100 random cars?')) return;
     setIsGenerating(true);
-    let success = 0,
-      fail = 0;
 
-    for (let i = 0; i < 100; i++) {
-      const name =
+    const genTasks = Array.from({ length: 100 }, () => {
+      const generatedName =
         `${BRANDS[Math.floor(Math.random() * BRANDS.length)]} ` +
         `${MODELS[Math.floor(Math.random() * MODELS.length)]}`;
-      try {
-        await createCar({ name, color: randomColor() }).unwrap();
-        success++;
-      } catch (err) {
-        console.error(`Generation ${i + 1} failed:`, err);
-        fail++;
-      }
-      await new Promise((r) => setTimeout(r, 100)); // throttle
-    }
+      return createCar({ name: generatedName, color: randomColor() })
+        .unwrap()
+        .then(() => true)
+        .catch((e: unknown) => {
+          console.error(e instanceof Error ? e : String(e));
+          return false;
+        });
+    });
 
-    alert(`Generation complete: ${success} succeeded, ${fail} failed out of 100.`);
+    const results      = await Promise.allSettled(genTasks);
+    const successCount = results.filter(
+      (r): r is PromiseFulfilledResult<boolean> => r.status === 'fulfilled' && r.value,
+    ).length;
+
+    alert(`Generation complete: ${successCount} succeeded, ${100 - successCount} failed.`);
     refetchCars();
     setIsGenerating(false);
-  };
+  }, [createCar, refetchCars]);
 
-  /* ───── bulk delete first 100 cars ────────────────────────────── */
-  const handleBulkDelete = async () => {
-    if (!window.confirm(`Delete first ${Math.min(100, resp?.total ?? 0)} cars?`)) return;
-    setDeletingMany(true);
+  /** delete first N cars (plus winners) */
+  const handleBulkDelete = useCallback(async () => {
+    const total = getCarsQ.data?.total ?? 0;
+    const toDelete = Math.min(100, total);
+    if (!window.confirm(`Delete first ${toDelete} cars?`)) return;
+    setIsDeletingMany(true);
 
     try {
-      const { data } = await fetchCars({ page: 1, limit: 1000 }).unwrap();
-      const ids = data.slice(0, 100).map((c) => c.id);
+      const dataResp = await fetchCars({ page: 1, limit: PAGE_LIMIT }).unwrap();
+      const ids      = dataResp.data.slice(0, toDelete).map((c) => c.id);
 
-      for (const id of ids) {
-        await deleteCar(id).unwrap();
-        await deleteWinner(id)
-          .unwrap()
-          .catch((e) => {
-            if (e?.status !== 404) throw e; // ignore “not a winner”
-          });
-        await new Promise((r) => setTimeout(r, 50)); // throttle
-      }
+      await Promise.all(
+        ids.map(async (id) => {
+          try {
+            await deleteCar(id).unwrap();
+            await deleteWinner(id).unwrap();
+          } catch (e: unknown) {
+            console.error(e instanceof Error ? e : String(e));
+          }
+        }),
+      );
 
       alert(`Deleted ${ids.length} cars`);
       refetchCars();
-    } catch (err) {
-      console.error('Bulk delete failed:', err);
-      alert('Something went wrong – see console for details.');
+    } catch (e: unknown) {
+      console.error(e instanceof Error ? e : String(e));
+      alert('Something went wrong – see console.');
     } finally {
-      setDeletingMany(false);
+      setIsDeletingMany(false);
     }
-  };
+  }, [deleteCar, deleteWinner, fetchCars, refetchCars, getCarsQ.data?.total]);
 
-  /* ───── UI ─────────────────────────────────────────────────────── */
+  /* ───────────────────── JSX ───────────────────── */
   return (
     <form onSubmit={handleSubmit} className="flex gap-2 mb-4 flex-wrap">
       <input
@@ -178,6 +211,7 @@ export default function CarForm() {
         onChange={(e) => setName(e.target.value)}
         className="input input-bordered"
       />
+
       <input
         type="color"
         value={color}
@@ -214,3 +248,4 @@ export default function CarForm() {
     </form>
   );
 }
+
