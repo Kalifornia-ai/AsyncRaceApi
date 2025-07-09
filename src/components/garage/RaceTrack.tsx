@@ -133,7 +133,7 @@ import {
               try {
                 const raw = await startEngine(car.id).unwrap();
                 if (!isStartRes(raw)) throw new Error();
-                velocity = raw.velocity / DEV_SLOWDOWN;
+                velocity = raw.velocity;
               } catch {
                 return { id: car.id, time: Infinity };
               }
