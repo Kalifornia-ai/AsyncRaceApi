@@ -4,7 +4,7 @@ An SPA to build a virtual garage, race radio‑controlled cars and track winners
 
 | Live demo                                                  | Score             |
 | ---------------------------------------------------------- | ----------------- |
-| https://github.com/Kalifornia-ai/AsyncRaceApi | **400 / 400 pts** |
+| https://kalifornia-ai.github.io/AsyncRaceApi/ | **400 / 400 pts** |
 
 All requirements implemented — see the fully ticked checklist below.
 
